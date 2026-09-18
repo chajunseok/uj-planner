@@ -105,7 +105,7 @@ domain/src/main/kotlin/com/uj/planner/domain/
 app/src/main/kotlin/com/uj/planner/
 ├── PlannerApp.kt   Application — 의존성 수동 조립
 ├── data/           entity/ dao/ Converters PlannerDatabase PlannerRepository
-└── ui/             PlannerNavHost, AdaptiveHost + week/ edit/ settings/ missed/ cover/ components/ theme/
+└── ui/             PlannerNavHost, AdaptiveHost + week/ edit/ settings/ missed/ today/ cover/ flex/ components/ theme/
 ```
 
 데이터는 한 방향으로만 흐른다.
@@ -125,6 +125,7 @@ Room DAO (Flow) → Repository → ViewModel (StateFlow) → Composable
 | 화면 이동 | Navigation Compose. 목적지는 `week` / `edit/{kind}?id={id}` / `settings` 셋 |
 | 테마 | 라이트 단일. 시스템 다크 모드를 따라가지 않는다 |
 | 커버 화면 | 네비게이션 스택을 갖지 않는다. `AdaptiveHost` 가 그 위에서 갈라낸다 |
+| 커버·플렉스 | "지금 할 차례" 판정은 `TodayViewModel` 한 곳. 두 화면은 같은 `Focus` 를 글자 크기만 달리해 그린다 |
 
 ## 검증 명령
 
@@ -156,7 +157,9 @@ find . -name "*.kt" -not -path "*/build/*" | xargs wc -l | awk '$1 > 500 && $2 !
 **알려진 한계**: 에뮬레이터 37.1.11 + API 36 arm64 조합에서 접었을 때 커버 디스플레이로 전환되는
 기능이 동작하지 않는다. 스톡 `7.6in Foldable` 프로필에서도 같아서 설정 문제가 아니다.
 그래서 `cover` / `main` 이 `wm size` 오버라이드로 커버 크기를 흉내 낸다.
-자세 전환(OPENED / HALF_OPENED / CLOSED)과 힌지 센서는 정상이므로 플렉스 모드 대응은 제대로 검증된다.
+또 하나, 이 이미지는 기기 상태 번호와 앱이 받는 `FoldingFeature` 상태의 매핑이 한 칸 어긋나 있다
+(상태 1 → HALF_OPENED, 2 → FLAT, 3 → 힌지 없음). 그래서 `emu.sh flex` 는 상태 1 을 건다. 앱 쪽 문제가 아니고
+실기기에서는 어긋나지 않는다. 힌지 위치(bounds)는 정상으로 전달되므로 플렉스 화면의 위아래 분할은 제대로 검증된다.
 
 ## 코드 기준
 
