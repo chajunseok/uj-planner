@@ -15,6 +15,9 @@ fun LocalDateTime.minuteOfDay(): Int = hour * 60 + minute
 /** [date] 가 속한 주의 월요일. */
 fun weekStartOf(date: LocalDate): LocalDate = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
 
+/** [weekStart] 주의 일요일. */
+fun weekEndOf(weekStart: LocalDate): LocalDate = weekStart.plusDays(6)
+
 /** [weekStart] 주를 [now] 시점에 배치할 때의 절단점. 이미 지나간 주라 배치할 곳이 없으면 null. */
 fun cutoffFor(weekStart: LocalDate, now: LocalDateTime): Cutoff? {
     val thisWeek = weekStartOf(now.toLocalDate())

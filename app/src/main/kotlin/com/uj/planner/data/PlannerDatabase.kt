@@ -42,7 +42,7 @@ private object SeedDefaultAvailability : RoomDatabase.Callback() {
     override fun onCreate(db: SupportSQLiteDatabase) {
         for (day in 1..7) {
             val (start, end) = if (day <= 5) 8 * 60 to 24 * 60 else 10 * 60 to 25 * 60
-            db.execSQL("INSERT INTO day_availability (dayOfWeek, startMin, endMin) VALUES ($day, $start, $end)")
+            db.execSQL("INSERT INTO day_availability (dayOfWeek, startMin, endMin) VALUES (?, ?, ?)", arrayOf(day, start, end))
         }
     }
 }

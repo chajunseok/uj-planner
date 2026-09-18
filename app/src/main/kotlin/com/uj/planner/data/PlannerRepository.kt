@@ -16,6 +16,7 @@ import com.uj.planner.domain.model.ScheduleResult
 import com.uj.planner.domain.model.Unplaced
 import com.uj.planner.domain.remainingSpecs
 import com.uj.planner.domain.schedule
+import com.uj.planner.domain.weekEndOf
 import com.uj.planner.domain.weekStartOf
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -48,7 +49,7 @@ class PlannerRepository(
     fun observeAvailability(): Flow<List<DayAvailabilityEntity>> = availability.observeAll()
 
     fun observeWeek(weekStart: LocalDate): Flow<List<PlacementEntity>> =
-        placements.observeBetween(weekStart, weekStart.plusDays(6))
+        placements.observeBetween(weekStart, weekEndOf(weekStart))
 
     /** 자리를 못 받은 가변 일정. 저장하지 않고 그때그때 계산하므로 앱을 다시 열어도 사라지지 않는다. */
     fun observeUnplaced(weekStart: LocalDate): Flow<List<Unplaced>> =
@@ -63,16 +64,30 @@ class PlannerRepository(
     }
 
     // 아래 쓰기는 배치 조건을 바꾸므로 같은 트랜잭션 안에서 이번 주를 다시 짠다.
+    // 저장 전에 도메인 모델로 한 번 변환해 불변식을 검사한다. 이 클래스가 DB 의 유일한 작성자이므로
+    // 여기서 막으면 잘못된 행이 생기지 않는다 — 한 행이라도 잘못되면 이후 모든 재계산이 실패하기 때문이다.
 
-    suspend fun saveFixedEvent(event: FixedEventEntity) = writeThenRecompute { fixedEvents.upsert(event) }
+    /** @throws IllegalArgumentException 값이 도메인 불변식을 어길 때. 아무것도 저장하지 않는다. */
+    suspend fun saveFixedEvent(event: FixedEventEntity) = writeThenRecompute {
+        event.toBlock()
+        fixedEvents.upsert(event)
+    }
 
     suspend fun deleteFixedEvent(event: FixedEventEntity) = writeThenRecompute { fixedEvents.delete(event) }
 
-    suspend fun saveFlexTask(task: FlexTaskEntity) = writeThenRecompute { flexTasks.upsert(task) }
+    /** @throws IllegalArgumentException 값이 도메인 불변식을 어길 때. 아무것도 저장하지 않는다. */
+    suspend fun saveFlexTask(task: FlexTaskEntity) = writeThenRecompute {
+        task.toSpec()
+        flexTasks.upsert(task)
+    }
 
     suspend fun deleteFlexTask(task: FlexTaskEntity) = writeThenRecompute { flexTasks.delete(task) }
 
-    suspend fun saveAvailability(days: List<DayAvailabilityEntity>) = writeThenRecompute { availability.upsertAll(days) }
+    /** @throws IllegalArgumentException 값이 도메인 불변식을 어길 때. 아무것도 저장하지 않는다. */
+    suspend fun saveAvailability(days: List<DayAvailabilityEntity>) = writeThenRecompute {
+        days.forEach { it.toSlot() }
+        availability.upsertAll(days)
+    }
 
     /**
      * [weekStart] 주의 아직 시작하지 않은 예정 배치를 지우고 남은 횟수를 다시 배치한다.
@@ -83,7 +98,7 @@ class PlannerRepository(
     suspend fun recomputeWeek(weekStart: LocalDate = currentWeekStart()): List<Unplaced> = db.withTransaction {
         val now = LocalDateTime.now(clock)
         val cutoff = cutoffFor(weekStart, now) ?: return@withTransaction emptyList()
-        val weekEnd = weekStart.plusDays(6)
+        val weekEnd = weekEndOf(weekStart)
         placements.deleteUpcomingPlanned(weekStart, weekEnd, now.toLocalDate(), now.minuteOfDay())
         val kept = placements.getBetween(weekStart, weekEnd)
         val specs = remainingSpecs(flexTasks.getAll().map { it.toSpec() }, kept.fulfilledCounts())
@@ -98,19 +113,23 @@ class PlannerRepository(
      */
     suspend fun resolveMissed(decisions: Map<Long, PlacementStatus>): ResolveResult = db.withTransaction {
         require(PlacementStatus.PLANNED !in decisions.values) { "PLANNED 는 밀린 일정에 대한 답이 아니다" }
-        val resolved = placements.getByIds(decisions.keys)
-        decisions.forEach { (id, status) -> placements.setStatus(id, status) }
+        // 아직 답을 받지 않은 배치에만 적용한다. 같은 답이 두 번 들어와도 재배치가 두 번 생기지 않고,
+        // 이미 완료·버림으로 확정된 배치를 덮어쓰지도 않는다.
+        val pending = placements.getByIds(decisions.keys).filter { it.status == PlacementStatus.PLANNED }
+        pending.forEach { placements.setStatus(it.id, decisions.getValue(it.id)) }
 
-        val weekStart = currentWeekStart()
-        val missedCounts = resolved
+        // 시계는 한 번만 읽는다. 두 번 읽으면 주가 바뀌는 순간에 주 시작일과 절단점이 어긋난다.
+        val now = LocalDateTime.now(clock)
+        val weekStart = weekStartOf(now.toLocalDate())
+        val missedCounts = pending
             .filter { decisions[it.id] == PlacementStatus.MISSED && it.date >= weekStart }
             .groupingBy { it.flexTaskId }
             .eachCount()
         if (missedCounts.isEmpty()) return@withTransaction ResolveResult(emptyList(), emptyList())
 
-        val cutoff = checkNotNull(cutoffFor(weekStart, LocalDateTime.now(clock))) { "이번 주에는 항상 절단점이 있다" }
+        val cutoff = checkNotNull(cutoffFor(weekStart, now)) { "이번 주에는 항상 절단점이 있다" }
         val specs = flexTasks.getAll().filter { it.id in missedCounts }.map { it.toSpec(times = missedCounts.getValue(it.id)) }
-        val week = placements.getBetween(weekStart, weekStart.plusDays(6))
+        val week = placements.getBetween(weekStart, weekEndOf(weekStart))
         val result = placeInto(weekStart, cutoff, specs, week)
         ResolveResult(result.planned, result.unplaced)
     }
