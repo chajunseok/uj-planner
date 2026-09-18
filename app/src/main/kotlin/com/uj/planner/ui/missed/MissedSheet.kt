@@ -87,7 +87,7 @@ fun MissedSheet(viewModel: MissedViewModel) {
                     Text("못한 건 이번 주 남은 빈칸에 다시 넣어 드려요.", fontSize = 13.sp, color = PlannerColors.Muted)
                 }
                 state.error?.let {
-                    Text("반영하지 못했어요: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                    Text("반영하지 못했어요: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
                 }
                 state.resolved.forEach { line -> ResolvedRow(line, onUndo = { viewModel.undo(line) }) }
                 state.pending.forEach { item -> PendingCard(item, onAnswer = { viewModel.answer(item, it) }) }

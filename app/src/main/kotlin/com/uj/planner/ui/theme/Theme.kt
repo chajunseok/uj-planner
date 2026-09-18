@@ -36,6 +36,7 @@ private val Scheme = lightColorScheme(
     outline = Color(0xFF8A817B),
     outlineVariant = Color(0xFFD6CCC2),
     // 붉은색은 하나만 쓴다. 현재 시각선·오류·주 색이 모두 로즈다.
+    // 로즈는 선과 채움에만 쓴다. 밝은 배경 위 글자로는 대비가 4.5:1 에 못 미쳐서 오류·삭제 글자는 onErrorContainer 를 쓴다.
     error = Color(0xFFB45A68),
     errorContainer = Color(0xFFF6D5D8),
     onErrorContainer = Color(0xFF5A1F2A),

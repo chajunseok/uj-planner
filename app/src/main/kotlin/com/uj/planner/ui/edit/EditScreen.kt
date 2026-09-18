@@ -100,7 +100,7 @@ fun EditScreen(viewModel: EditViewModel, onClose: () -> Unit) {
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     viewModel.error?.let {
-                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                        Text(it, color = MaterialTheme.colorScheme.onErrorContainer, style = MaterialTheme.typography.bodySmall)
                     }
                     Button(
                         onClick = { viewModel.save(onClose) },
@@ -112,7 +112,7 @@ fun EditScreen(viewModel: EditViewModel, onClose: () -> Unit) {
                         TextButton(
                             onClick = { viewModel.delete(onClose) },
                             enabled = !viewModel.busy,
-                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onErrorContainer),
                             modifier = Modifier.fillMaxWidth().height(48.dp),
                         ) {
                             Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(20.dp))
