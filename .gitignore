@@ -1,0 +1,23 @@
+# Gradle
+.gradle/
+build/
+local.properties
+
+# Android
+*.apk
+*.aab
+*.ap_
+*.dex
+captures/
+.cxx/
+
+# IDE
+.idea/
+*.iml
+.kotlin/
+
+# macOS
+.DS_Store
+
+# Claude Code — 머신 고유 설정
+.claude/settings.local.json
