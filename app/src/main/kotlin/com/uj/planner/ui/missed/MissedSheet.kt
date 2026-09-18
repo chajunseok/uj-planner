@@ -78,6 +78,9 @@ fun MissedSheet(viewModel: MissedViewModel) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                state.error?.let {
+                    Text("반영하지 못했어요: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
                 state.resolved.forEach { line -> ResolvedRow(line, onUndo = { viewModel.undo(line) }) }
                 state.pending.forEach { item -> PendingCard(item, onAnswer = { viewModel.answer(item, it) }) }
 

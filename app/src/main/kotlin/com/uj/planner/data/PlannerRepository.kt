@@ -203,10 +203,20 @@ class PlannerRepository(
         ResolveResult(result.planned, result.unplaced, ids)
     }
 
-    /** [resolveMissed] 의 답 하나를 무른다. 그 답으로 새로 잡힌 자리([ResolveResult.movedIds])를 지우고 다시 확인 대기로 돌린다. */
-    suspend fun undoResolve(placementId: Long, movedIds: List<Long>) = db.withTransaction {
+    /**
+     * [resolveMissed] 의 답 하나를 무른다. 그 답으로 새로 잡힌 자리([ResolveResult.movedIds])를 지우고 다시 확인 대기로 돌린다.
+     *
+     * @return 무를 수 없는 상태라 아무것도 바꾸지 않았으면 false. 새로 잡힌 자리가 그 사이 재계산으로 바뀌었거나
+     *   이미 답을 받았다면, 되돌릴 때 그 자리가 남아 주당 횟수를 넘기게 된다.
+     */
+    suspend fun undoResolve(placementId: Long, movedIds: List<Long>): Boolean = db.withTransaction {
+        val answered = placements.getByIds(listOf(placementId)).singleOrNull()
+        val moved = placements.getByIds(movedIds)
+        val intact = moved.size == movedIds.size && moved.all { it.status == PlacementStatus.PLANNED }
+        if (answered == null || answered.status == PlacementStatus.PLANNED || !intact) return@withTransaction false
         placements.deleteByIds(movedIds)
         placements.setStatus(placementId, PlacementStatus.PLANNED)
+        true
     }
 
     /** `못함` 으로 답했지만 다시 넣을 빈칸이 없던 배치를 이번 주에서 포기한다. 포기한 횟수는 채운 것으로 쳐서 다시 배치하지 않는다. */

@@ -10,6 +10,7 @@ import com.uj.planner.ui.formatDuration
 import com.uj.planner.ui.formatRange
 import com.uj.planner.ui.formatTime
 import com.uj.planner.ui.theme.TaskColor
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -46,8 +47,10 @@ data class MissedUiState(
     val noRoom: MissedItem? = null,
     /** "나중에" 로 닫았다. 앱에 다시 들어오면 풀린다. */
     val dismissed: Boolean = false,
+    /** 답을 반영하지 못했다. 시트에 그대로 보여 준다. */
+    val error: String? = null,
 ) {
-    val sheetVisible get() = !dismissed && (pending.isNotEmpty() || resolved.isNotEmpty())
+    val sheetVisible get() = !dismissed && (pending.isNotEmpty() || resolved.isNotEmpty() || error != null)
 }
 
 class MissedViewModel(private val repository: PlannerRepository) : ViewModel() {
@@ -57,9 +60,14 @@ class MissedViewModel(private val repository: PlannerRepository) : ViewModel() {
     // 답은 하나씩 차례로 반영한다. 버튼을 연달아 눌러도 같은 배치에 두 번 답하지 않는다.
     private val mutex = Mutex()
 
-    /** 앱에 들어올 때마다 부른다. */
+    /**
+     * 앱에 들어올 때마다 부른다. 밀린 목록만 새로 읽고 "나중에" 만 푼다.
+     * 결과 줄과 빈칸 없음 다이얼로그는 남긴다 — 화면이 잠깐 꺼졌다 켜져도 이 함수가 불리는데, 그때 다이얼로그를 지우면
+     * 이미 `못함` 으로 저장된 그 배치를 어떻게 할지 다시 물을 길이 없어진다.
+     */
     fun refresh() = launchLocked {
-        _state.value = MissedUiState(pending = loadPending())
+        val pending = loadPending()
+        _state.update { it.copy(pending = pending, dismissed = false, error = null) }
     }
 
     fun answer(item: MissedItem, status: PlacementStatus) = launchLocked {
@@ -89,8 +97,14 @@ class MissedViewModel(private val repository: PlannerRepository) : ViewModel() {
     }
 
     fun undo(line: ResolvedLine) = launchLocked {
-        repository.undoResolve(line.placementId, line.movedIds)
-        _state.update { it.copy(resolved = it.resolved - line, pending = loadPending()) }
+        if (!line.undoable) return@launchLocked
+        val undone = repository.undoResolve(line.placementId, line.movedIds)
+        val pending = loadPending()
+        _state.update { s ->
+            // 무를 수 없는 상태였다면 줄은 남기고 되돌리기만 닫는다.
+            val resolved = if (undone) s.resolved - line else s.resolved.map { if (it == line) it.copy(undoable = false) else it }
+            s.copy(resolved = resolved, pending = pending)
+        }
     }
 
     /** 빈칸 없음 다이얼로그를 답 없이 닫았다. `못함` 인 채로 둔다. */
@@ -116,7 +130,8 @@ class MissedViewModel(private val repository: PlannerRepository) : ViewModel() {
         addLine(item, ResolvedLine(item.placement.id, text, item.whenText(), undoable = false))
     }
 
-    fun dismiss() = _state.update { it.copy(dismissed = true) }
+    /** 시트를 닫는다. 결과 줄은 여기서 비운다 — 되돌릴 기회는 시트가 열려 있는 동안이다. */
+    fun dismiss() = _state.update { it.copy(dismissed = true, resolved = emptyList(), error = null) }
 
     private fun addLine(item: MissedItem, line: ResolvedLine) = _state.update {
         it.copy(pending = it.pending - item, noRoom = null, resolved = listOf(line) + it.resolved)
@@ -130,6 +145,18 @@ class MissedViewModel(private val repository: PlannerRepository) : ViewModel() {
     }
 
     private fun launchLocked(block: suspend () -> Unit) {
-        viewModelScope.launch { mutex.withLock { block() } }
+        viewModelScope.launch {
+            mutex.withLock {
+                try {
+                    block()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // 이 시트는 앱에 들어올 때마다 저절로 뜬다. 여기서 죽으면 앱을 열 때마다 죽는다.
+                    // 답은 트랜잭션이라 반쯤 저장되지 않는다 — 알리고 목록은 그대로 둔다.
+                    _state.update { it.copy(error = e.message ?: "반영하지 못했어요") }
+                }
+            }
+        }
     }
 }
