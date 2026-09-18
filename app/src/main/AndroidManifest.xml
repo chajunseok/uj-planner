@@ -5,6 +5,7 @@
          Android 12+ 에서는 이 값이 클라우드 백업만 끄고 기기 간 직접 전송은 남긴다 — 의도한 동작이다.
          lint 의 DataExtractionRules 경고는 이 때문에 그대로 둔다. -->
     <application
+        android:name=".PlannerApp"
         android:label="U.J planner"
         android:allowBackup="false"
         android:theme="@style/Theme.UjPlanner">

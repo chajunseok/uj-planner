@@ -98,7 +98,8 @@ uj-planner/
 ```
 domain/src/main/kotlin/com/uj/planner/domain/
 ├── model/        FixedBlock, FlexTaskSpec, Window, Slot, ScheduleResult
-└── Scheduler.kt  fun schedule(ScheduleInput): ScheduleResult — 순수 함수
+├── Scheduler.kt  fun schedule(ScheduleInput): ScheduleResult — 순수 함수
+└── WeekMath.kt   주 시작일·절단점·남은 횟수 — Repository 가 쓰는 순수 계산
 
 app/src/main/kotlin/com/uj/planner/
 ├── PlannerApp.kt   Application — 의존성 수동 조립
@@ -160,9 +161,10 @@ find . -name "*.kt" -not -path "*/build/*" | xargs wc -l | awk '$1 > 500 && $2 !
 |---|---|
 | 시각 | 자정 기준 분(`Int`). `LocalTime` 컨버터를 만들지 않는다 |
 | 날짜 | `LocalDate` ↔ `epochDay: Long` 컨버터 하나 |
+| enum | Room 이 이름 문자열로 직접 저장한다. 컨버터를 만들지 않는다. **상수 이름을 바꾸면 기존 데이터가 깨진다** |
 | 요일 | `java.time.DayOfWeek.value` (월=1 … 일=7) |
 | 배치 실패 | `ScheduleResult.unplaced`로 **반환**한다. 예외를 던지거나 조용히 버리지 않는다 |
-| 테스트 | `domain/src/test/`에 순수 JUnit. 계측 테스트를 만들지 않는다 |
+| 테스트 | `domain/src/test/`에 순수 JUnit. 계측 테스트를 만들지 않는다. **DB 와 무관한 계산은 `domain` 으로 빼서 거기서 검증한다** — Repository 에는 읽기·계산 호출·쓰기만 남긴다 |
 | DI | 프레임워크 없이 `Application`에서 직접 조립한다. 생성자 주입만 지킨다 |
 
 ### 파일 길이
