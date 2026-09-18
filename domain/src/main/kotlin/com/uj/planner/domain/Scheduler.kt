@@ -55,6 +55,15 @@ fun schedule(input: ScheduleInput): ScheduleResult {
     return ScheduleResult(planned, unplaced)
 }
 
+/**
+ * 지금 비어 있는 요일별 구간. 스케줄러가 자리를 찾을 때 쓰는 것과 같은 계산이라,
+ * 사용자가 블록을 손으로 옮길 때 놓을 수 있는 자리를 이걸로 판정한다. [ScheduleInput.tasks] 는 보지 않는다.
+ */
+fun freeSlots(input: ScheduleInput): Map<Int, List<Slot>> = freeSlotsByDay(input)
+
+/** `[startMin, endMin)` 이 빈 구간 하나에 통째로 들어가는가. */
+fun List<Slot>.fits(startMin: Int, endMin: Int): Boolean = any { it.startMin <= startMin && endMin <= it.endMin }
+
 /** 가용 시간에서 지난 시간·고정 일정·기존 배치를 뺀 요일별 빈 구간. 각 목록은 시작 시각 오름차순이다. */
 private fun freeSlotsByDay(input: ScheduleInput): Map<Int, MutableList<Slot>> {
     val free = input.availability

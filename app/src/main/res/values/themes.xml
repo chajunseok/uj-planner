@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- 플랫폼에 DayNight 의 NoActionBar 변형이 공개돼 있지 않아 직접 끈다.
-         Compose 가 그려지기 전 창 배경이 시스템 다크 모드를 따르게 하는 것이 목적이다. -->
-    <style name="Theme.UjPlanner" parent="@android:style/Theme.DeviceDefault.DayNight">
-        <item name="android:windowNoTitle">true</item>
-        <item name="android:windowActionBar">false</item>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- 시안이 라이트 단일 테마다. 창 배경을 surface 로 맞춰 Compose 가 그려지기 전에 색이 튀지 않게 한다.
+         스플래시는 Android 12+ 의 시스템 스플래시를 그대로 쓴다 — 하루에 여러 번 여는 앱이라 짧을수록 좋다. -->
+    <style name="Theme.UjPlanner" parent="@android:style/Theme.DeviceDefault.Light.NoActionBar">
+        <item name="android:windowBackground">@color/surface</item>
+        <item name="android:windowSplashScreenBackground" tools:targetApi="31">@color/surface</item>
+        <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="31">@mipmap/ic_launcher_foreground</item>
     </style>
 </resources>

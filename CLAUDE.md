@@ -5,6 +5,7 @@
 - **PRD**: `.claude/prd/2609/260918.uj-planner.prd.md`
 - **계획**: `.claude/plan/2609/260918.uj-planner.plan.md`
 - **디자인 의뢰문**: `.claude/design/2609/260918.uj-planner.design.md`
+- **디자인 구현 스펙**: `.claude/design/2609/260918.uj-planner.design-spec.md` — 색·타이포·치수·블록 상태의 출처. 색 값은 `ui/theme/` 에만 둔다
 - Application ID: `com.uj.planner` / minSdk 30 / targetSdk 36 / **compileSdk 37** / JDK 17
 - Gradle 9.7.1 / AGP 9.3.3 / Kotlin 2.4.20 / KSP 2.3.12 — 버전은 `gradle/libs.versions.toml` 한 곳에만 적는다
 
@@ -98,13 +99,13 @@ uj-planner/
 ```
 domain/src/main/kotlin/com/uj/planner/domain/
 ├── model/        FixedBlock, FlexTaskSpec, Window, Slot, ScheduleResult
-├── Scheduler.kt  fun schedule(ScheduleInput): ScheduleResult — 순수 함수
+├── Scheduler.kt  schedule(ScheduleInput) 과 freeSlots(ScheduleInput) — 순수 함수
 └── WeekMath.kt   주 시작일·절단점·남은 횟수 — Repository 가 쓰는 순수 계산
 
 app/src/main/kotlin/com/uj/planner/
 ├── PlannerApp.kt   Application — 의존성 수동 조립
 ├── data/           entity/ dao/ Converters PlannerDatabase PlannerRepository
-└── ui/             AdaptiveHost + week/ edit/ settings/ missed/ cover/ theme/
+└── ui/             PlannerNavHost, AdaptiveHost + week/ edit/ settings/ missed/ cover/ components/ theme/
 ```
 
 데이터는 한 방향으로만 흐른다.
@@ -118,9 +119,11 @@ Room DAO (Flow) → Repository → ViewModel (StateFlow) → Composable
 | 규칙 | |
 |---|---|
 | `Scheduler` 호출 | **`PlannerRepository` 에서만.** ViewModel도 Composable도 직접 부르지 않는다 |
-| Repository 진입점 | `recomputeWeek(weekStart)` 와 `resolveMissed(decisions)` 둘뿐 |
+| 시간표를 바꾸는 경로 | `recomputeWeek` · `resolveMissed` · `movePlacement` 셋뿐. 일정·가용 시간 저장은 안에서 `recomputeWeek` 를 부른다 |
+| 손으로 옮긴 배치 | `pinned` 로 표시하고 재계산에서 지우지 않는다. 그 일정을 다시 저장하거나 `다시 짜기` 를 누르면 풀린다 |
 | 배치 결과 | `Placement` 테이블에 **저장한다.** 조회할 때마다 계산하지 않는다 |
-| 화면 이동 | Navigation Compose. 목적지는 `week` / `edit/{id?}` / `settings` 셋 |
+| 화면 이동 | Navigation Compose. 목적지는 `week` / `edit/{kind}?id={id}` / `settings` 셋 |
+| 테마 | 라이트 단일. 시스템 다크 모드를 따라가지 않는다 |
 | 커버 화면 | 네비게이션 스택을 갖지 않는다. `AdaptiveHost` 가 그 위에서 갈라낸다 |
 
 ## 검증 명령

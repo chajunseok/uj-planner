@@ -22,6 +22,13 @@ class WeekMathTest {
     }
 
     @Test
+    fun `주 이름은 목요일이 속한 달로 센다`() {
+        assertEquals(9 to 3, weekOfMonth(monday))
+        assertEquals(9 to 1, weekOfMonth(LocalDate.of(2026, 8, 31)))
+        assertEquals(10 to 1, weekOfMonth(LocalDate.of(2026, 9, 28)))
+    }
+
+    @Test
     fun `이번 주의 절단점은 지금 요일과 시각이다`() {
         assertEquals(Cutoff(fromDay = 5, fromMin = 15 * 60 + 20), cutoffFor(monday, fridayAfternoon))
     }
