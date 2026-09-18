@@ -5,7 +5,13 @@
 - **PRD**: `.claude/prd/2609/260918.uj-planner.prd.md`
 - **계획**: `.claude/plan/2609/260918.uj-planner.plan.md`
 - **디자인 의뢰문**: `.claude/design/2609/260918.uj-planner.design.md`
-- Application ID: `com.uj.planner` / minSdk 30 / compileSdk 36 / JDK 17
+- Application ID: `com.uj.planner` / minSdk 30 / targetSdk 36 / **compileSdk 37** / JDK 17
+- Gradle 9.7.1 / AGP 9.3.3 / Kotlin 2.4.20 / KSP 2.3.12 — 버전은 `gradle/libs.versions.toml` 한 곳에만 적는다
+
+`compileSdk` 가 `targetSdk` 보다 높은 것은 의도한 것이다. 최신 androidx 가 compileSdk 37 이상을 요구한다.
+앱의 동작 기준은 `targetSdk` 36(플립7의 Android 16)이고, `compileSdk` 는 컴파일에 쓰는 API 목록일 뿐이다.
+
+AGP 9 는 Kotlin 이 내장이다. **`org.jetbrains.kotlin.android` 플러그인을 적용하지 않는다** — 적용하면 빌드가 깨진다.
 
 ## Git 작업 규칙
 

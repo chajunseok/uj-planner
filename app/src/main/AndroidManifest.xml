@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:label="U.J planner"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+
+        <!-- resizeableActivity: 접힘·커버 전환 시 창 크기 변화를 받기 위해 필수 -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:resizeableActivity="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
