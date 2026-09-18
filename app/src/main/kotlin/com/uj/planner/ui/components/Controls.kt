@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -41,6 +42,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -80,11 +83,12 @@ fun SectionLabel(text: String, hint: String? = null, top: Dp = 20.dp, bottom: Dp
 private fun StepCell(icon: ImageVector, description: String, enabled: Boolean, onClick: () -> Unit, caption: String? = null, width: Dp = 52.dp) {
     val tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (enabled) 1f else 0.38f)
     Column(
-        Modifier.width(width).fillMaxHeight().clickable(enabled = enabled, role = Role.Button, onClickLabel = description, onClick = onClick),
+        // 이름은 여기 한 곳에서만 붙인다. 아이콘에도 같은 말을 달면 두 번 읽힌다.
+        Modifier.width(width).fillMaxHeight().clickable(enabled = enabled, role = Role.Button, onClick = onClick).semantics { contentDescription = description },
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Icon(icon, contentDescription = description, tint = tint, modifier = Modifier.size(if (caption == null) 22.dp else 20.dp))
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(if (caption == null) 22.dp else 20.dp))
         if (caption != null) Text(caption, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, color = tint)
     }
 }
@@ -152,7 +156,7 @@ fun PillChip(label: String, selected: Boolean, onClick: () -> Unit, horizontalPa
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun <T> ChoiceChips(options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit, gap: Dp = 8.dp, horizontalPadding: Dp = 14.dp) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(gap), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    FlowRow(Modifier.selectableGroup(), horizontalArrangement = Arrangement.spacedBy(gap), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         options.forEach { (value, label) -> PillChip(label, value == selected, { onSelect(value) }, horizontalPadding) }
     }
 }
@@ -173,7 +177,7 @@ fun <T> Segmented(
     checkSelected: Boolean = false,
     icon: ((T) -> ImageVector)? = null,
 ) {
-    Row(modifier.fillMaxWidth().height(height).outlinedBox(shape)) {
+    Row(modifier.fillMaxWidth().height(height).outlinedBox(shape).selectableGroup()) {
         options.forEachIndexed { i, option ->
             if (i > 0) Divider()
             SegmentCell(label(option), option == selected, { onSelect(option) }, if (checkSelected) Icons.Rounded.Check.takeIf { option == selected } else icon?.invoke(option), big = checkSelected)

@@ -56,6 +56,9 @@ object PlannerColors {
     /** 카드 안 본문 글자. */
     val Body = Color(0xFF4A4946)
 
+    /** 자정을 넘긴 종료 시각 옆의 "+1". */
+    val NextDay = Color(0xFF7A5300)
+
     /** "끝!" 카드. */
     val DoneContainer = Color(0xFFE8F1E9)
     val OnDoneContainer = Color(0xFF0D3F1B)

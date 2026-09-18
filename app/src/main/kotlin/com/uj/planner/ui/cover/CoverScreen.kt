@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -19,15 +20,15 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import com.uj.planner.ui.theme.PlannerColors
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.draw.alpha
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.uj.planner.data.entity.PlacementStatus
 import com.uj.planner.domain.minuteOfDay
 import com.uj.planner.ui.formatTime
+import com.uj.planner.ui.theme.PlannerColors
 import com.uj.planner.ui.today.FocusPrimaryButton
 import com.uj.planner.ui.today.FocusText
 import com.uj.planner.ui.today.TodayUiState
@@ -63,7 +64,8 @@ fun CoverScreen(state: TodayUiState, onAnswer: (Long, PlacementStatus) -> Unit) 
                     onClick = { if (id != null) onAnswer(id, PlacementStatus.MISSED) },
                     enabled = canMiss,
                     colors = ButtonDefaults.textButtonColors(contentColor = PlannerColors.Muted),
-                    modifier = Modifier.height(48.dp).alpha(if (canMiss) 1f else 0f),
+                    // 자리만 차지할 때는 화면 읽기에도 없는 것으로 친다.
+                    modifier = Modifier.height(48.dp).alpha(if (canMiss) 1f else 0f).then(if (canMiss) Modifier else Modifier.clearAndSetSemantics {}),
                 ) { Text("못함", fontSize = 15.sp, fontWeight = FontWeight.SemiBold) }
             }
         }

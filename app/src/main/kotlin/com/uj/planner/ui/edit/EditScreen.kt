@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -217,7 +218,7 @@ private fun ColumnScope.FixedFields(form: FixedForm, onChange: (FixedForm) -> Un
 
 @Composable
 private fun ColorGrid(selected: Int, onSelect: (Int) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         TaskColor.entries.chunked(4).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 row.forEach { color ->
@@ -320,7 +321,7 @@ private fun PreviewLine(text: Pair<String, String>) {
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Normal,
             lineHeight = 20.sp,
-            color = Color(0xFF4A4946),
+            color = PlannerColors.Body,
         )
     }
 }

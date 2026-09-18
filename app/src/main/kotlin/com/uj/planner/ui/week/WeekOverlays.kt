@@ -12,8 +12,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.EventBusy
@@ -108,7 +110,8 @@ fun UnplacedDetails(items: List<UnplacedItem>, onChangeConditions: (Long) -> Uni
         shadowElevation = 8.dp,
         modifier = modifier.padding(horizontal = 12.dp).fillMaxWidth().border(1.dp, scheme.surfaceVariant, shape),
     ) {
-        Column {
+        // 못 넣은 일정이 많으면 화면보다 길어진다. 패널 안에서 스크롤한다.
+        Column(Modifier.verticalScroll(rememberScrollState())) {
             items.forEachIndexed { i, (task, missing) ->
                 if (i > 0) HorizontalDivider(color = scheme.surfaceVariant)
                 Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

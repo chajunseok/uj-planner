@@ -1,5 +1,6 @@
 package com.uj.planner.ui.week
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,9 +44,9 @@ import com.uj.planner.ui.edit.EditKind
 import com.uj.planner.ui.missed.MissedSheet
 import com.uj.planner.ui.missed.MissedViewModel
 import com.uj.planner.ui.theme.PlannerColors
-import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.LocalDateTime
+import kotlinx.coroutines.delay
 
 private val ORDINALS = listOf("첫째", "둘째", "셋째", "넷째", "다섯째")
 
@@ -138,7 +139,11 @@ fun WeekScreen(
                 }
                 // 상세와 빈 상태 카드는 그리드를 밀지 않고 위에 덮는다.
                 if (state.unplaced.isNotEmpty() && unplacedExpanded) {
-                    UnplacedDetails(state.unplaced, onChangeConditions = { onEdit(EditKind.FLEX, it) }, onReplan = viewModel::replan)
+                    // 패널 바깥을 누르면 닫힌다. 이 막이 없으면 패널 옆으로 아래 그리드의 블록이 눌린다.
+                    Box(
+                        Modifier.matchParentSize().clickable(interactionSource = null, indication = null, onClickLabel = "상세 닫기") { unplacedExpanded = false },
+                    )
+                    UnplacedDetails(state.unplaced, onChangeConditions = { onEdit(EditKind.FLEX, it) }, onReplan = viewModel::replan, modifier = Modifier.padding(bottom = 12.dp))
                 }
                 if (state.isEmpty) {
                     EmptyCard(
