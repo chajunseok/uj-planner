@@ -20,6 +20,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.uj.planner.ui.theme.PlannerColors
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.alpha
+import androidx.compose.material3.ButtonDefaults
 import com.uj.planner.data.entity.PlacementStatus
 import com.uj.planner.domain.minuteOfDay
 import com.uj.planner.ui.formatTime
@@ -37,9 +42,9 @@ fun CoverScreen(state: TodayUiState, onAnswer: (Long, PlacementStatus) -> Unit) 
         // 안전 여백 28dp 와 시스템 바 중 큰 쪽만큼 띄운다. 361dp 높이라 둘을 더하면 카드가 눌린다.
         Column(Modifier.windowInsetsPadding(WindowInsets.safeDrawing.union(WindowInsets(28.dp, 28.dp, 28.dp, 28.dp)))) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(formatTime(state.now.minuteOfDay()), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(formatTime(state.now.minuteOfDay()), style = MaterialTheme.typography.labelMedium, color = PlannerColors.Muted)
                 if (state.remaining > 0) {
-                    Text("오늘 남은 ${state.remaining}개", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("오늘 남은 ${state.remaining}개", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium, color = PlannerColors.Muted)
                 }
             }
             Spacer(Modifier.weight(1f))
@@ -52,9 +57,14 @@ fun CoverScreen(state: TodayUiState, onAnswer: (Long, PlacementStatus) -> Unit) 
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FocusPrimaryButton(state.focus, height = 64.dp, onAnswer = onAnswer)
                 val id = state.focus.placementId
-                if (id != null && state.focus.kind.hasMissed) {
-                    TextButton(onClick = { onAnswer(id, PlacementStatus.MISSED) }, modifier = Modifier.height(48.dp)) { Text("못함") }
-                }
+                // 못함이 없는 카드에서도 자리는 남긴다. 주 버튼의 폭이 카드마다 달라지지 않게 한다.
+                val canMiss = id != null && state.focus.kind.hasMissed
+                TextButton(
+                    onClick = { if (id != null) onAnswer(id, PlacementStatus.MISSED) },
+                    enabled = canMiss,
+                    colors = ButtonDefaults.textButtonColors(contentColor = PlannerColors.Muted),
+                    modifier = Modifier.height(48.dp).alpha(if (canMiss) 1f else 0f),
+                ) { Text("못함", fontSize = 15.sp, fontWeight = FontWeight.SemiBold) }
             }
         }
     }

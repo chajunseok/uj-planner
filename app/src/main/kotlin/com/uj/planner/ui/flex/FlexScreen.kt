@@ -22,7 +22,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Replay
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -35,6 +34,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.uj.planner.ui.week.outline
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import com.uj.planner.data.entity.PlacementStatus
 import com.uj.planner.ui.DAY_NAMES
 import com.uj.planner.ui.formatRange
@@ -60,33 +71,54 @@ private val HINGE_KEEP_OUT = 16.dp
 fun FlexScreen(state: TodayUiState, hingeTop: Dp, hingeBottom: Dp, onAnswer: (Long, PlacementStatus) -> Unit) {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
         Column {
-            Column(Modifier.height((hingeTop - HINGE_KEEP_OUT).coerceAtLeast(0.dp)).statusBarsPadding().padding(horizontal = 20.dp)) {
+            Column(Modifier.height((hingeTop - HINGE_KEEP_OUT).coerceAtLeast(0.dp)).statusBarsPadding()) {
                 val date = state.now.toLocalDate()
-                Text("${DAY_NAMES[date.dayOfWeek.value - 1]}요일", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
-                Text(
-                    "${date.monthValue}월 ${date.dayOfMonth}일 · " + if (state.remaining > 0) "남은 일정 ${state.remaining}개" else "남은 일정 없음",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Column(Modifier.padding(top = 12.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    state.items.forEach { TimelineRow(it) }
+                Row(Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("${DAY_NAMES[date.dayOfWeek.value - 1]}요일", style = MaterialTheme.typography.titleLarge, modifier = Modifier.alignByBaseline())
+                    Text(
+                        "${date.monthValue}월 ${date.dayOfMonth}일 · " + if (state.remaining > 0) "남은 일정 ${state.remaining}개" else "남은 일정 없음",
+                        fontSize = 13.sp,
+                        color = PlannerColors.Muted,
+                        modifier = Modifier.alignByBaseline(),
+                    )
+                }
+                Column(Modifier.padding(start = 20.dp, end = 16.dp, top = 12.dp).verticalScroll(rememberScrollState())) {
+                    state.items.forEachIndexed { i, item -> TimelineRow(item, last = i == state.items.lastIndex) }
                 }
             }
             // 접히는 도중에는 힌지 좌표가 뒤집혀 올 수 있다. 음수 높이는 레이아웃에서 예외가 된다.
             Spacer(Modifier.height((hingeBottom - hingeTop + HINGE_KEEP_OUT * 2).coerceAtLeast(0.dp)))
-            Column(Modifier.fillMaxSize().navigationBarsPadding().padding(start = 20.dp, end = 20.dp, bottom = 24.dp)) {
+            Column(
+                Modifier.fillMaxSize().navigationBarsPadding().padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    when (state.focus.kind) {
+                        Focus.Kind.OVERDUE -> "지난 일정 · 어떻게 됐어요?"
+                        Focus.Kind.NOW -> "지금"
+                        Focus.Kind.NEXT -> "다음"
+                        Focus.Kind.ALL_DONE, Focus.Kind.EMPTY -> "오늘"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = PlannerColors.Muted,
+                )
                 FocusCard(state.focus, Modifier.weight(1f))
-                Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FocusPrimaryButton(state.focus, height = 56.dp, onAnswer = onAnswer)
-                    val id = state.focus.placementId
-                    if (id != null && state.focus.kind.hasMissed) {
-                        FilledTonalButton(
-                            onClick = { onAnswer(id, PlacementStatus.MISSED) },
-                            shape = RoundedCornerShape(20.dp),
-                            modifier = Modifier.height(56.dp),
-                        ) {
-                            Icon(Icons.Rounded.Replay, contentDescription = null, modifier = Modifier.size(20.dp))
-                            Text("못함", Modifier.padding(start = 6.dp))
+                val id = state.focus.placementId
+                if (id != null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        FocusPrimaryButton(state.focus, height = 56.dp, weight = 1.6f, onAnswer = onAnswer)
+                        if (state.focus.kind.hasMissed) {
+                            OutlinedButton(
+                                onClick = { onAnswer(id, PlacementStatus.MISSED) },
+                                shape = RoundedCornerShape(18.dp),
+                                border = BorderStroke(1.dp, PlannerColors.FaintOutline),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
+                                modifier = Modifier.weight(1f).height(56.dp),
+                            ) {
+                                Icon(Icons.Rounded.Replay, contentDescription = null, modifier = Modifier.size(20.dp))
+                                Text("못함", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
+                            }
                         }
                     }
                 }
@@ -97,49 +129,74 @@ fun FlexScreen(state: TodayUiState, hingeTop: Dp, hingeBottom: Dp, onAnswer: (Lo
 
 @Composable
 private fun FocusCard(focus: Focus, modifier: Modifier = Modifier) {
-    val container = when {
-        focus.kind == Focus.Kind.ALL_DONE -> PlannerColors.DoneContainer
-        focus.kind == Focus.Kind.NOW && focus.color != null -> focus.color.bg
-        else -> MaterialTheme.colorScheme.surfaceContainerLow
+    val scheme = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(20.dp)
+    // 지금 할 일만 그 일정의 색으로 채운다. 물어보는 카드(지난 일정·다음)는 흰 바탕에 테두리.
+    val (container, tint) = when {
+        focus.kind == Focus.Kind.ALL_DONE -> PlannerColors.DoneContainer to PlannerColors.OnDoneContainer
+        focus.kind == Focus.Kind.NOW && focus.color != null -> focus.color.bg to focus.color.fg
+        else -> scheme.surfaceContainerLowest to null
     }
-    Surface(color = container, shape = RoundedCornerShape(20.dp), modifier = modifier.fillMaxWidth()) {
-        Box(Modifier.padding(20.dp), contentAlignment = Alignment.CenterStart) {
-            FocusText(focus, titleStyle = MaterialTheme.typography.headlineSmall)
-        }
+    Box(
+        modifier.fillMaxWidth().background(container, shape)
+            .border(1.dp, if (tint == null) scheme.surfaceVariant else Color.Transparent, shape).padding(horizontal = 20.dp, vertical = 18.dp),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        FocusText(focus, titleStyle = MaterialTheme.typography.headlineSmall, tint = tint)
     }
 }
 
+/** 시각 · 점과 세로줄 · 카드. 지금 하는 일정은 시각이 빨갛고 점에 고리가 둘린다. */
 @Composable
-private fun TimelineRow(item: TodayItem) {
+private fun TimelineRow(item: TodayItem, last: Boolean) {
     val scheme = MaterialTheme.colorScheme
     val done = item.status == PlacementStatus.DONE
-    val gone = item.status == PlacementStatus.DROPPED || item.status == PlacementStatus.MISSED
-    val fg = if (gone) PlannerColors.Faint else item.color?.fg ?: scheme.onSurfaceVariant
-    Row(Modifier.alpha(if (done) 0.6f else 1f), verticalAlignment = Alignment.CenterVertically) {
+    val missed = item.status == PlacementStatus.MISSED
+    val dropped = item.status == PlacementStatus.DROPPED
+    val fg = if (dropped) PlannerColors.Faint else item.color?.fg ?: scheme.onSurfaceVariant
+    val shape = RoundedCornerShape(10.dp)
+    Row(Modifier.height(IntrinsicSize.Min).heightIn(min = 54.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
             formatTime(item.startMin),
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.bodySmall,
             fontWeight = if (item.isNow) FontWeight.Bold else FontWeight.Medium,
             color = if (item.isNow) scheme.error else PlannerColors.Faint,
-            modifier = Modifier.width(52.dp),
+            modifier = Modifier.width(38.dp).padding(top = 5.dp),
         )
+        Column(Modifier.width(12.dp).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                Modifier.padding(top = 8.dp).size(8.dp)
+                    .then(if (item.isNow) Modifier.drawBehind { drawCircle(scheme.error, radius = 6.5.dp.toPx(), style = Stroke(2.dp.toPx())) } else Modifier)
+                    .background(fg, CircleShape),
+            )
+            if (!last) Box(Modifier.padding(top = 4.dp).width(2.dp).weight(1f).background(scheme.outlineVariant))
+        }
         Row(
-            Modifier.weight(1f).heightIn(min = 44.dp)
-                .background(if (gone) scheme.surface else item.color?.bg ?: scheme.surfaceVariant, RoundedCornerShape(12.dp))
-                .padding(horizontal = 12.dp, vertical = 6.dp),
+            Modifier.weight(1f).padding(bottom = 8.dp).alpha(if (done) 0.6f else 1f)
+                .background(if (missed || dropped) scheme.surface else item.color?.bg ?: scheme.surfaceVariant, shape)
+                .then(
+                    when {
+                        item.isNow -> Modifier.border(2.dp, fg, shape)
+                        missed -> Modifier.drawBehind { outline(fg, 2.dp, dashed = true, radius = 10.dp) }
+                        dropped -> Modifier.border(1.dp, PlannerColors.FaintOutline, shape)
+                        else -> Modifier
+                    },
+                )
+                .padding(horizontal = 10.dp, vertical = 7.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Column(Modifier.weight(1f)) {
                 Text(
                     item.title,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.labelLarge,
                     color = fg,
-                    textDecoration = if (done || item.status == PlacementStatus.DROPPED) TextDecoration.LineThrough else null,
+                    textDecoration = if (done || dropped) TextDecoration.LineThrough else null,
                     maxLines = 1,
                 )
                 Text(
-                    formatRange(item.startMin, item.endMin) + if (item.color == null) " · 고정" else "",
-                    style = MaterialTheme.typography.bodySmall,
+                    formatRange(item.startMin, item.endMin) + if (item.color == null) " · 고정" else if (missed) " · 지났어요" else "",
+                    fontSize = 11.sp,
                     color = fg.copy(alpha = 0.8f),
                 )
             }

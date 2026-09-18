@@ -62,14 +62,14 @@ val PlacementStatus?.label: String
         PlacementStatus.DROPPED -> "버림"
     }
 
-/** 블록 바깥 둘레에 [gap] 만큼 띄워 그리는 둥근 테두리. */
-private fun DrawScope.outline(color: Color, width: Dp, gap: Dp = 0.dp, dashed: Boolean = false) {
+/** 블록 바깥 둘레에 [gap] 만큼 띄워 그리는 둥근 테두리. 플렉스 타임라인의 못함 카드도 같은 점선을 쓴다. */
+internal fun DrawScope.outline(color: Color, width: Dp, gap: Dp = 0.dp, dashed: Boolean = false, radius: Dp = 6.dp) {
     val inset = width.toPx() / 2 - gap.toPx()
     drawRoundRect(
         color = color,
         topLeft = Offset(inset, inset),
         size = Size(size.width - inset * 2, size.height - inset * 2),
-        cornerRadius = CornerRadius(6.dp.toPx() + gap.toPx()),
+        cornerRadius = CornerRadius(radius.toPx() + gap.toPx()),
         style = Stroke(
             width = width.toPx(),
             pathEffect = if (dashed) PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx())) else null,

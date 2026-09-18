@@ -271,13 +271,13 @@ private fun GridBackground(state: WeekUiState, now: LocalDateTime, geometry: Gri
         Box(
             Modifier.offset(x = geometry.x(todayColumn))
                 .size(geometry.columnWidth, geometry.height(state.gridStartMin, state.gridEndMin))
-                .background(scheme.primary.copy(alpha = 0.05f)),
+                .background(PlannerColors.TodayColumn, RoundedCornerShape(8.dp)),
         )
     }
     for (min in state.gridStartMin..state.gridEndMin step 60) {
         Box(
             Modifier.offset(AXIS_WIDTH, geometry.y(min)).fillMaxWidth().padding(end = AXIS_WIDTH + GRID_END_PADDING)
-                .height(1.dp).background(scheme.outlineVariant.copy(alpha = 0.6f)),
+                .height(1.dp).background(scheme.surfaceVariant),
         )
         if (min < state.gridEndMin) {
             Text(
@@ -299,5 +299,5 @@ private fun NowLine(state: WeekUiState, now: LocalDateTime, geometry: GridGeomet
     val x = geometry.x(now.dayOfWeek.value)
     val color = MaterialTheme.colorScheme.error
     Box(Modifier.offset(x, geometry.y(nowMin) - 1.dp).size(geometry.columnWidth, 2.dp).background(color))
-    Box(Modifier.offset(x - 3.dp, geometry.y(nowMin) - 3.dp).size(6.dp).background(color, CircleShape))
+    Box(Modifier.offset(x - 4.dp, geometry.y(nowMin) - 4.dp).size(8.dp).background(color, CircleShape))
 }

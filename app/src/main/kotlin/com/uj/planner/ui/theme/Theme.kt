@@ -50,6 +50,12 @@ object PlannerColors {
     /** 비선택 칩과 버림 블록의 테두리. */
     val FaintOutline = Color(0xFFBDB9B2)
 
+    /** 주간 그리드의 오늘 열. */
+    val TodayColumn = Color(0xFFF0EDE7)
+
+    /** 카드 안 본문 글자. */
+    val Body = Color(0xFF4A4946)
+
     /** "끝!" 카드. */
     val DoneContainer = Color(0xFFE8F1E9)
     val OnDoneContainer = Color(0xFF0D3F1B)
