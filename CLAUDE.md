@@ -50,17 +50,58 @@ docs: 배치 규칙 설명 보강
 **`~다` 체를 쓰지 않는다.** `~했다`, `~한다`, `~이다`, `~됐다` 모두 해당하며 제목·본문·불릿 전부 적용된다.
 제목은 명사로 끝낸다 (`추가`, `수정`, `분리`, `보강`).
 
+## 아키텍처
+
+모듈은 둘이고 `app → domain` 단방향이다. 반대 방향 의존은 없다.
+
+```
+uj-planner/
+├── domain/     Kotlin JVM. 배치 규칙과 그 입출력 타입만
+└── app/        안드로이드. data(Room) + ui(Compose)
+```
+
+**`domain` 에 안드로이드 플러그인을 적용하지 않는다.** 그래서 `import android.*` 가 컴파일 자체가
+안 된다. 이 경계는 규율이 아니라 빌드가 강제한다. 경계를 넓히고 싶어지면 코드를 옮기지 말고
+왜 필요한지부터 따진다.
+
+```
+domain/src/main/kotlin/com/uj/planner/domain/
+├── model/        FixedBlock, FlexTaskSpec, Window, Slot, ScheduleResult
+└── Scheduler.kt  fun schedule(ScheduleInput): ScheduleResult — 순수 함수
+
+app/src/main/kotlin/com/uj/planner/
+├── PlannerApp.kt   Application — 의존성 수동 조립
+├── data/           entity/ dao/ Converters PlannerDatabase PlannerRepository
+└── ui/             AdaptiveHost + week/ edit/ settings/ missed/ cover/ theme/
+```
+
+데이터는 한 방향으로만 흐른다.
+
+```
+Room DAO (Flow) → Repository → ViewModel (StateFlow) → Composable
+        ▲                                                    │
+        └──────────────────── 사용자 액션 ────────────────────┘
+```
+
+| 규칙 | |
+|---|---|
+| `Scheduler` 호출 | **`PlannerRepository` 에서만.** ViewModel도 Composable도 직접 부르지 않는다 |
+| Repository 진입점 | `recomputeWeek(weekStart)` 와 `resolveMissed(decisions)` 둘뿐 |
+| 배치 결과 | `Placement` 테이블에 **저장한다.** 조회할 때마다 계산하지 않는다 |
+| 화면 이동 | Navigation Compose. 목적지는 `week` / `edit/{id?}` / `settings` 셋 |
+| 커버 화면 | 네비게이션 스택을 갖지 않는다. `AdaptiveHost` 가 그 위에서 갈라낸다 |
+
 ## 검증 명령
 
 `Makefile`이 없다. 아래 Gradle 명령이 이 레포의 검증 명령이다.
 
 ```bash
-./gradlew :app:testDebugUnitTest   # 스케줄러 테스트 — 가장 먼저 돌린다
+./gradlew :domain:test             # 스케줄러 테스트 — 가장 먼저 돌린다
 ./gradlew :app:assembleDebug       # 빌드
 ./gradlew :app:installDebug        # 에뮬레이터에 설치
 ```
 
-커밋 전에 최소한 `testDebugUnitTest`와 `assembleDebug`가 통과해야 한다.
+커밋 전에 최소한 `:domain:test` 와 `:app:assembleDebug` 가 통과해야 한다.
 
 ## 에뮬레이터
 
@@ -87,7 +128,5 @@ docs: 배치 규칙 설명 보강
 | 날짜 | `LocalDate` ↔ `epochDay: Long` 컨버터 하나 |
 | 요일 | `java.time.DayOfWeek.value` (월=1 … 일=7) |
 | 배치 실패 | `ScheduleResult.unplaced`로 **반환**한다. 예외를 던지거나 조용히 버리지 않는다 |
-| 테스트 | `app/src/test/`에 순수 JUnit. 계측 테스트를 만들지 않는다 |
+| 테스트 | `domain/src/test/`에 순수 JUnit. 계측 테스트를 만들지 않는다 |
 | DI | 프레임워크 없이 `Application`에서 직접 조립한다. 생성자 주입만 지킨다 |
-
-스케줄러(`domain/`)는 안드로이드 의존성이 없어야 한다. `import android.*`가 들어가면 잘못된 것이다.
