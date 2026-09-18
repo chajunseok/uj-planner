@@ -6,7 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.uj.planner.ui.PlannerNavHost
+import com.uj.planner.ui.AdaptiveHost
 import com.uj.planner.ui.theme.PlannerTheme
 
 class MainActivity : ComponentActivity() {
@@ -17,7 +17,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
         val repository = (application as PlannerApp).repository
         setContent {
-            PlannerTheme { PlannerNavHost(repository) }
+            PlannerTheme { AdaptiveHost(repository) }
         }
     }
 }

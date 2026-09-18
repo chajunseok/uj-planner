@@ -39,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.uj.planner.data.entity.PlacementStatus
@@ -55,7 +56,8 @@ fun MissedSheet(viewModel: MissedViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     LifecycleResumeEffect(viewModel) {
         viewModel.refresh()
-        onPauseOrDispose {}
+        // 접어서 커버·플렉스로 가면 이 시트가 컴포지션에서 빠질 뿐 앱을 나간 것이 아니다. 그때는 "나중에" 를 풀지 않는다.
+        onPauseOrDispose { if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) viewModel.undismiss() }
     }
 
     if (state.sheetVisible) {
