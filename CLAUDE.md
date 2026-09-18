@@ -99,9 +99,12 @@ Room DAO (Flow) → Repository → ViewModel (StateFlow) → Composable
 ./gradlew :domain:test             # 스케줄러 테스트 — 가장 먼저 돌린다
 ./gradlew :app:assembleDebug       # 빌드
 ./gradlew :app:installDebug        # 에뮬레이터에 설치
+
+# 500줄 초과 파일 — 출력이 비어 있어야 한다
+find . -name "*.kt" -not -path "*/build/*" | xargs wc -l | awk '$1 > 500 && $2 != "total"'
 ```
 
-커밋 전에 최소한 `:domain:test` 와 `:app:assembleDebug` 가 통과해야 한다.
+커밋 전에 최소한 `:domain:test` 와 `:app:assembleDebug` 가 통과하고, 500줄 검사 출력이 비어 있어야 한다.
 
 ## 에뮬레이터
 
@@ -130,3 +133,26 @@ Room DAO (Flow) → Repository → ViewModel (StateFlow) → Composable
 | 배치 실패 | `ScheduleResult.unplaced`로 **반환**한다. 예외를 던지거나 조용히 버리지 않는다 |
 | 테스트 | `domain/src/test/`에 순수 JUnit. 계측 테스트를 만들지 않는다 |
 | DI | 프레임워크 없이 `Application`에서 직접 조립한다. 생성자 주입만 지킨다 |
+
+### 파일 길이
+
+**한 파일은 500줄을 넘지 않는다.** 넘어갈 것 같으면 미리 쪼갠다.
+
+쪼갤 때는 **책임 단위로** 자른다. 줄 수만 맞추려고 아무 데서나 자르면 파일 수만 늘고 읽기는 더 나빠진다.
+
+이 프로젝트에서 길어지기 쉬운 곳과 쪼갤 방향은 이렇다.
+
+| 길어지는 곳 | 나눌 기준 |
+|---|---|
+| `Scheduler.kt` | 빈 슬롯 계산 / 정렬 / 배치 3단계로 파일을 나눈다 |
+| `WeekGridScreen.kt` | 시간축·요일헤더·일정블록을 같은 폴더의 별도 Composable 파일로 뺀다 |
+| `TaskEditScreen.kt` | 고정 탭과 가변 탭을 각각 별도 파일로 둔다 |
+| `PlannerRepository.kt` | `recomputeWeek` 계열과 `resolveMissed` 계열을 나눈다 |
+
+### 중복
+
+**같은 로직을 두 군데에 두지 않는다.** 새로 쓰기 전에 이미 같은 일을 하는 것이 있는지 먼저 찾는다.
+붙여넣기로 시작하는 코드는 대개 공용 함수로 뺄 자리다.
+
+단, **우연히 모양만 비슷한 두 코드를 억지로 합치지 않는다.** 한쪽이 바뀔 때 다른 쪽도 반드시 같이
+바뀌어야 하는 관계일 때만 합친다. 그렇지 않은 것을 합치면 나중에 풀기 어려운 결합이 된다.
