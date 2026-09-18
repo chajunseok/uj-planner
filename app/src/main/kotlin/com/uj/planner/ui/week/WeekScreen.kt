@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
@@ -44,6 +45,7 @@ import com.uj.planner.ui.edit.EditKind
 import com.uj.planner.ui.missed.MissedSheet
 import com.uj.planner.ui.missed.MissedViewModel
 import com.uj.planner.ui.theme.PlannerColors
+import com.uj.planner.ui.theme.serif
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.delay
@@ -164,7 +166,7 @@ private fun WeekHeader(weekStart: LocalDate, isThisWeek: Boolean, onSettings: ()
     val range = "${weekStart.monthValue}.${weekStart.dayOfMonth} – ${end.monthValue}.${end.dayOfMonth}"
     Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text("${month}월 ${ORDINALS[ordinal - 1]} 주", style = MaterialTheme.typography.titleMedium)
+            Text("${month}월 ${ORDINALS[ordinal - 1]} 주", style = MaterialTheme.typography.titleMedium.serif())
             Text(
                 if (isThisWeek) "$range · 이번 주" else range,
                 style = MaterialTheme.typography.bodySmall,
@@ -201,6 +203,7 @@ private fun WeekBottomBar(
                     text = { Text("일정", style = MaterialTheme.typography.labelLarge) },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
+                    shape = RoundedCornerShape(18.dp),
                     modifier = Modifier.height(48.dp),
                 )
             }

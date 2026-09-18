@@ -87,7 +87,7 @@ fun MissedSheet(viewModel: MissedViewModel) {
                     Text("못한 건 이번 주 남은 빈칸에 다시 넣어 드려요.", fontSize = 13.sp, color = PlannerColors.Muted)
                 }
                 state.error?.let {
-                    Text("반영하지 못했어요: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                    Text("반영하지 못했어요: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
                 }
                 state.resolved.forEach { line -> ResolvedRow(line, onUndo = { viewModel.undo(line) }) }
                 state.pending.forEach { item -> PendingCard(item, onAnswer = { viewModel.answer(item, it) }) }
@@ -156,7 +156,7 @@ fun MissedSheet(viewModel: MissedViewModel) {
 private fun ResolvedRow(line: ResolvedLine, onUndo: () -> Unit) {
     val fg = PlannerColors.OnDoneContainer
     Row(
-        Modifier.fillMaxWidth().background(PlannerColors.DoneContainer, RoundedCornerShape(16.dp)).padding(start = 14.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
+        Modifier.fillMaxWidth().background(PlannerColors.DoneContainer, RoundedCornerShape(18.dp)).padding(start = 14.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -175,7 +175,7 @@ private fun ResolvedRow(line: ResolvedLine, onUndo: () -> Unit) {
 
 @Composable
 private fun PendingCard(item: MissedItem, onAnswer: (PlacementStatus) -> Unit) {
-    val shape = RoundedCornerShape(16.dp)
+    val shape = RoundedCornerShape(18.dp)
     val button = RoundedCornerShape(14.dp)
     Column(
         Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainerLowest, shape)
