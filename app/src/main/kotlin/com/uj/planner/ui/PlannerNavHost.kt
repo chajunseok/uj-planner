@@ -12,6 +12,8 @@ import com.uj.planner.ui.edit.EditKind
 import com.uj.planner.ui.edit.EditScreen
 import com.uj.planner.ui.edit.EditViewModel
 import com.uj.planner.ui.missed.MissedViewModel
+import com.uj.planner.ui.settings.SettingsScreen
+import com.uj.planner.ui.settings.SettingsViewModel
 import com.uj.planner.ui.week.WeekScreen
 import com.uj.planner.ui.week.WeekViewModel
 
@@ -27,6 +29,7 @@ fun PlannerNavHost(repository: PlannerRepository) {
                 viewModel = viewModel { WeekViewModel(repository) },
                 missedViewModel = viewModel { MissedViewModel(repository) },
                 onEdit = { kind, id -> nav.navigate("edit/${kind.name}?id=${id ?: NO_ID}") },
+                onSettings = { nav.navigate("settings") },
             )
         }
         composable(
@@ -40,6 +43,9 @@ fun PlannerNavHost(repository: PlannerRepository) {
             val kind = EditKind.valueOf(checkNotNull(args.getString("kind")))
             val id = args.getLong("id").takeIf { it != NO_ID }
             EditScreen(viewModel { EditViewModel(repository, kind, id) }, onClose = { nav.popBackStack() })
+        }
+        composable("settings") {
+            SettingsScreen(viewModel { SettingsViewModel(repository) }, onBack = { nav.popBackStack() })
         }
     }
 }

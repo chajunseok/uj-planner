@@ -27,6 +27,7 @@ import androidx.compose.material.icons.rounded.Autorenew
 import androidx.compose.material.icons.rounded.EventBusy
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.OpenWith
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.ViewWeek
 import androidx.compose.material3.Button
@@ -87,7 +88,12 @@ fun rememberNow(): LocalDateTime {
  * @param onEdit 편집 화면으로. id 가 null 이면 새 일정.
  */
 @Composable
-fun WeekScreen(viewModel: WeekViewModel, missedViewModel: MissedViewModel, onEdit: (EditKind, Long?) -> Unit) {
+fun WeekScreen(
+    viewModel: WeekViewModel,
+    missedViewModel: MissedViewModel,
+    onEdit: (EditKind, Long?) -> Unit,
+    onSettings: () -> Unit,
+) {
     MissedSheet(missedViewModel)
     val state = viewModel.state.collectAsStateWithLifecycle().value ?: return
     val freeSlots by viewModel.freeSlots.collectAsStateWithLifecycle()
@@ -104,7 +110,7 @@ fun WeekScreen(viewModel: WeekViewModel, missedViewModel: MissedViewModel, onEdi
             // 끄는 동안의 안내는 제목 자리에 그린다. 그리드 위에 끼워 넣으면 그리드가 밀려 손가락과 블록이 어긋난다.
             Box(Modifier.statusBarsPadding().fillMaxWidth().height(64.dp), contentAlignment = Alignment.CenterStart) {
                 val movingBlock = moving
-                if (movingBlock != null) MoveBanner(movingBlock, moveTarget) else WeekHeader(state.weekStart, state.isThisWeek)
+                if (movingBlock != null) MoveBanner(movingBlock, moveTarget) else WeekHeader(state.weekStart, state.isThisWeek, onSettings)
             }
         },
         bottomBar = {
@@ -165,17 +171,20 @@ fun WeekScreen(viewModel: WeekViewModel, missedViewModel: MissedViewModel, onEdi
 }
 
 @Composable
-private fun WeekHeader(weekStart: LocalDate, isThisWeek: Boolean) {
+private fun WeekHeader(weekStart: LocalDate, isThisWeek: Boolean, onSettings: () -> Unit) {
     val (month, ordinal) = weekOfMonth(weekStart)
     val end = weekEndOf(weekStart)
     val range = "${weekStart.monthValue}.${weekStart.dayOfMonth} – ${end.monthValue}.${end.dayOfMonth}"
-    Column(Modifier.padding(horizontal = 20.dp)) {
-        Text("${month}월 ${ORDINALS[ordinal - 1]} 주", style = MaterialTheme.typography.titleMedium)
-        Text(
-            if (isThisWeek) "$range · 이번 주" else range,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+    Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text("${month}월 ${ORDINALS[ordinal - 1]} 주", style = MaterialTheme.typography.titleMedium)
+            Text(
+                if (isThisWeek) "$range · 이번 주" else range,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        IconButton(onClick = onSettings) { Icon(Icons.Rounded.Settings, "설정") }
     }
 }
 
