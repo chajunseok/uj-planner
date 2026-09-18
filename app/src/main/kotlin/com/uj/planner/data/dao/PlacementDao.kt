@@ -33,7 +33,7 @@ interface PlacementDao {
     suspend fun getOverdue(today: LocalDate, nowMin: Int): List<PlacementEntity>
 
     @Insert
-    suspend fun insertAll(placements: List<PlacementEntity>): List<Long>
+    suspend fun insertAll(placements: List<PlacementEntity>)
 
     @Query("UPDATE placement SET status = :status WHERE id = :id")
     suspend fun setStatus(id: Long, status: PlacementStatus)

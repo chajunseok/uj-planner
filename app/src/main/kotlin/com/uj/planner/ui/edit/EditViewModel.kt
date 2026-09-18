@@ -12,6 +12,7 @@ import com.uj.planner.data.entity.FlexTaskEntity
 import com.uj.planner.domain.model.PlannedSlot
 import com.uj.planner.domain.model.Window
 import com.uj.planner.ui.theme.TaskColor
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.SharingStarted
@@ -64,7 +65,12 @@ class EditViewModel(
     var error by mutableStateOf<String?>(null)
         private set
 
-    private var originalFixed: FixedEventEntity? = null
+    /** 저장·삭제가 진행 중. 버튼을 연달아 눌러 같은 일정이 두 번 저장되는 것을 막는다. */
+    var busy by mutableStateOf(false)
+        private set
+
+    /** 편집 중인 고정 일정의 모든 요일 줄. */
+    private var originalFixed: List<FixedEventEntity> = emptyList()
     private var originalFlex: FlexTaskEntity? = null
 
     /** 지금 저장하면 이번 주 어디에 놓일지. 계산 전이거나 조건이 말이 안 되면 null. */
@@ -77,9 +83,10 @@ class EditViewModel(
         viewModelScope.launch {
             when {
                 id == null -> flex = flex.copy(colorIndex = repository.observeFlexTasks().first().size % TaskColor.entries.size)
-                initialKind == EditKind.FIXED -> repository.observeFixedEvents().first().find { it.id == id }?.let {
-                    originalFixed = it
-                    fixed = FixedForm(it.title, setOf(it.dayOfWeek), it.startMin, it.durationMin)
+                initialKind == EditKind.FIXED -> repository.fixedEventSeries(id).takeIf { it.isNotEmpty() }?.let { series ->
+                    originalFixed = series
+                    val one = series.first()
+                    fixed = FixedForm(one.title, series.map { it.dayOfWeek }.toSet(), one.startMin, one.durationMin)
                 }
                 else -> repository.observeFlexTasks().first().find { it.id == id }?.let {
                     originalFlex = it
@@ -89,7 +96,7 @@ class EditViewModel(
         }
     }
 
-    val canSave get() = if (kind == EditKind.FIXED) fixed.canSave else flex.canSave
+    val canSave get() = !busy && if (kind == EditKind.FIXED) fixed.canSave else flex.canSave
 
     fun save(onSaved: () -> Unit) = run(onSaved) {
         when (kind) {
@@ -102,17 +109,23 @@ class EditViewModel(
     }
 
     fun delete(onDeleted: () -> Unit) = run(onDeleted) {
-        originalFixed?.let { repository.deleteFixedEvent(it) }
+        if (originalFixed.isNotEmpty()) repository.deleteFixedEvents(originalFixed)
         originalFlex?.let { repository.deleteFlexTask(it) }
     }
 
     private fun run(onSuccess: () -> Unit, action: suspend () -> Unit) {
+        if (busy) return
+        busy = true
         viewModelScope.launch {
             try {
                 action()
                 onSuccess()
-            } catch (e: IllegalArgumentException) {
-                error = e.message
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // 값이 거부됐거나 DB 쓰기가 실패했다. 트랜잭션이라 저장된 것은 없다 — 폼을 그대로 두고 알린다.
+                error = e.message ?: "저장하지 못했어요"
+                busy = false
             }
         }
     }

@@ -24,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,8 +66,6 @@ private val DETAIL_CARD_WIDTH = 196.dp
 data class MoveTarget(val block: WeekBlock, val dayOfWeek: Int, val startMin: Int, val valid: Boolean) {
     val endMin get() = startMin + block.endMin - block.startMin
 }
-
-private data class Drag(val block: WeekBlock, val offset: Offset)
 
 private class GridGeometry(val columnWidth: Dp, private val gridStartMin: Int) {
     fun x(dayOfWeek: Int): Dp = AXIS_WIDTH + columnWidth * (dayOfWeek - 1)
@@ -138,16 +137,24 @@ fun WeekGrid(
     BoxWithConstraints(modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
         val gridWidth = maxWidth
         val geometry = GridGeometry((gridWidth - AXIS_WIDTH - GRID_END_PADDING) / 7, state.gridStartMin)
-        var drag by remember { mutableStateOf<Drag?>(null) }
+        // 끄는 블록과 끌린 거리를 따로 둔다. 거리는 픽셀마다 바뀌므로 그리기 단계(graphicsLayer)와 아래 derivedStateOf
+        // 안에서만 읽는다 — 그래야 손가락이 움직일 때마다 모든 블록이 다시 구성되지 않는다.
+        var dragging by remember { mutableStateOf<WeekBlock?>(null) }
+        var dragOffset by remember { mutableStateOf(Offset.Zero) }
 
-        val target = drag?.let { d ->
-            with(density) {
-                val column = (geometry.x(d.block.dayOfWeek).toPx() + d.offset.x - AXIS_WIDTH.toPx()) / geometry.columnWidth.toPx()
-                val day = (floor(column + 0.5f).toInt() + 1).coerceIn(1, 7)
-                val row = ((geometry.y(d.block.startMin).toPx() + d.offset.y) / ROW_HEIGHT.toPx()).roundToInt()
-                val start = state.gridStartMin + row * GRID_MIN
-                val valid = freeSlots[day]?.fits(start, start + d.block.endMin - d.block.startMin) == true
-                MoveTarget(d.block, day, start, valid)
+        // 가리키는 자리는 30분·한 열 단위로만 바뀐다. derivedStateOf 라 값이 바뀔 때만 읽는 쪽이 다시 구성된다.
+        val target by remember(freeSlots, state.gridStartMin, gridWidth, density) {
+            derivedStateOf {
+                dragging?.let { block ->
+                    with(density) {
+                        val column = (geometry.x(block.dayOfWeek).toPx() + dragOffset.x - AXIS_WIDTH.toPx()) / geometry.columnWidth.toPx()
+                        val day = (floor(column + 0.5f).toInt() + 1).coerceIn(1, 7)
+                        val row = ((geometry.y(block.startMin).toPx() + dragOffset.y) / ROW_HEIGHT.toPx()).roundToInt()
+                        val start = state.gridStartMin + row * GRID_MIN
+                        val valid = freeSlots[day]?.fits(start, start + block.endMin - block.startMin) == true
+                        MoveTarget(block, day, start, valid)
+                    }
+                }
             }
         }
         LaunchedEffect(target) { onMoveTarget(target) }
@@ -159,7 +166,7 @@ fun WeekGrid(
         Box(Modifier.padding(top = GRID_TOP_PADDING, bottom = 16.dp).fillMaxWidth().height(gridHeight)) {
             GridBackground(state, now, geometry)
 
-            if (drag != null) {
+            if (dragging != null) {
                 freeSlots.values.flatten().forEach { slot ->
                     val start = slot.startMin.coerceAtLeast(state.gridStartMin)
                     val end = slot.endMin.coerceAtMost(state.gridEndMin)
@@ -185,24 +192,24 @@ fun WeekGrid(
             val today = now.toLocalDate()
             val nowMin = now.minuteOfDay()
             state.blocks.forEach { block ->
-                val dragged = drag?.takeIf { it.block.key == block.key }
+                val isDragged = dragging?.key == block.key
                 val date = state.weekStart.plusDays(block.dayOfWeek - 1L)
                 val inProgress = block.status == PlacementStatus.PLANNED && date == today && nowMin in block.startMin until block.endMin
                 val movable = block.status == PlacementStatus.PLANNED && !state.isPast
                 val cell = Modifier.offset(geometry.x(block.dayOfWeek), geometry.y(block.startMin))
                     .size(geometry.columnWidth, geometry.height(block.startMin, block.endMin))
 
-                if (dragged != null) BlockGhost(block, cell)
+                if (isDragged) BlockGhost(block, cell)
                 BlockView(
                     block = block,
                     inProgress = inProgress,
-                    dragging = dragged != null,
+                    dragging = isDragged,
                     modifier = cell
-                        .zIndex(if (dragged != null) 1f else 0f)
+                        .zIndex(if (isDragged) 1f else 0f)
                         .graphicsLayer {
-                            if (dragged != null) {
-                                translationX = dragged.offset.x
-                                translationY = dragged.offset.y
+                            if (isDragged) {
+                                translationX = dragOffset.x
+                                translationY = dragOffset.y
                                 scaleX = 1.08f
                                 scaleY = 1.08f
                                 shadowElevation = 6.dp.toPx()
@@ -212,20 +219,21 @@ fun WeekGrid(
                             if (!movable) Modifier else Modifier.pointerInput(block) {
                                 detectDragGesturesAfterLongPress(
                                     onDragStart = {
-                                        drag = Drag(block, Offset.Zero)
+                                        dragOffset = Offset.Zero
+                                        dragging = block
                                         latestOnMoveStart(block)
                                     },
                                     onDrag = { change, amount ->
                                         change.consume()
-                                        drag = drag?.let { it.copy(offset = it.offset + amount) }
+                                        dragOffset += amount
                                     },
                                     onDragEnd = {
                                         latestOnMoveEnd(block, latestTarget?.takeIf { it.valid })
-                                        drag = null
+                                        dragging = null
                                     },
                                     onDragCancel = {
                                         latestOnMoveEnd(block, null)
-                                        drag = null
+                                        dragging = null
                                     },
                                 )
                             },

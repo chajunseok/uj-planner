@@ -115,13 +115,15 @@ private const val MAX_DURATION = 12 * 60
 /** 소요시간. 자주 쓰는 값은 칩으로, 그 밖은 "직접" 을 골라 30분 단위로 맞춘다. */
 @Composable
 fun DurationPicker(durationMin: Int, onChange: (Int) -> Unit) {
-    var custom by rememberSaveable { mutableStateOf(durationMin !in DURATION_PRESETS) }
+    // 값은 편집 화면이 뜬 뒤에 비동기로 들어온다. 그래서 "직접" 여부를 처음 값으로 굳히지 않고 매번 값에서 다시 본다.
+    var customChosen by rememberSaveable { mutableStateOf(false) }
+    val custom = customChosen || durationMin !in DURATION_PRESETS
     val options = DURATION_PRESETS.map { it to if (it == 90) "1.5시간" else formatDuration(it) } + (null to "직접")
     ChoiceChips<Int?>(
         options = options,
         selected = if (custom) null else durationMin,
         onSelect = {
-            custom = it == null
+            customChosen = it == null
             if (it != null) onChange(it)
         },
     )

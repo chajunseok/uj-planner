@@ -124,7 +124,7 @@ fun EditScreen(viewModel: EditViewModel, onClose: () -> Unit) {
                 FlexFields(viewModel.flex, preview) { viewModel.flex = it }
             }
             if (!viewModel.isNew) {
-                TextButton(onClick = { viewModel.delete(onClose) }, modifier = Modifier.padding(vertical = 12.dp).align(Alignment.CenterHorizontally)) {
+                TextButton(onClick = { viewModel.delete(onClose) }, enabled = !viewModel.busy, modifier = Modifier.padding(vertical = 12.dp).align(Alignment.CenterHorizontally)) {
                     Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
                     Text("이 일정 삭제", color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(start = 6.dp))
                 }

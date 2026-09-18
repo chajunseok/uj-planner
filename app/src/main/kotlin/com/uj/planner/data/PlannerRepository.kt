@@ -73,17 +73,28 @@ class PlannerRepository(
     /**
      * 고정 일정은 요일당 한 줄이라, 여러 요일을 고른 등록은 여러 줄이 된다.
      *
-     * @param replacing 편집 중이던 줄. 지우고 [events] 로 바꾼다.
+     * @param replacing 편집 중이던 줄들([fixedEventSeries]). 지우고 [events] 로 바꾼다.
      * @throws IllegalArgumentException 값이 도메인 불변식을 어길 때. 아무것도 저장하지 않는다.
      */
-    suspend fun saveFixedEvents(events: List<FixedEventEntity>, replacing: FixedEventEntity? = null) =
+    suspend fun saveFixedEvents(events: List<FixedEventEntity>, replacing: List<FixedEventEntity> = emptyList()) =
         writeThenRecompute {
             events.forEach { it.toBlock() }
-            replacing?.let { fixedEvents.delete(it) }
+            replacing.forEach { fixedEvents.delete(it) }
             events.forEach { fixedEvents.upsert(it.copy(id = 0)) }
         }
 
-    suspend fun deleteFixedEvent(event: FixedEventEntity) = writeThenRecompute { fixedEvents.delete(event) }
+    suspend fun deleteFixedEvents(events: List<FixedEventEntity>) =
+        writeThenRecompute { events.forEach { fixedEvents.delete(it) } }
+
+    /**
+     * [id] 와 함께 등록된 줄들 — 이름·시작·길이가 같고 요일만 다른 것. 사용자에게는 이것이 일정 하나다.
+     * 한 줄만 편집 대상으로 삼으면, 나머지 요일을 다시 고르는 순간 같은 줄이 두 번 생긴다.
+     */
+    suspend fun fixedEventSeries(id: Long): List<FixedEventEntity> {
+        val all = fixedEvents.getAll()
+        val one = all.find { it.id == id } ?: return emptyList()
+        return all.filter { it.title == one.title && it.startMin == one.startMin && it.durationMin == one.durationMin }
+    }
 
     /** @throws IllegalArgumentException 값이 도메인 불변식을 어길 때. 아무것도 저장하지 않는다. */
     suspend fun saveFlexTask(task: FlexTaskEntity) = writeThenRecompute {
@@ -115,6 +126,7 @@ class PlannerRepository(
     /**
      * [weekStart] 주의 아직 시작하지 않은 예정 배치를 지우고 남은 횟수를 다시 배치한다.
      * 완료·못함·버림, 이미 지나갔거나 진행 중인 배치, 손으로 옮긴 배치는 건드리지 않는다.
+     * 단 손으로 옮긴 자리가 나중에 생긴 고정 일정이나 줄어든 가용 시간과 부딪히면 그 고정은 풀린다.
      *
      * @param resetPins true 면 손으로 옮긴 배치도 풀고 처음부터 다시 짠다.
      * @return 자리가 없어 못 넣은 일정. 지나간 주라면 아무것도 하지 않고 빈 목록을 돌려준다.
@@ -208,8 +220,11 @@ class PlannerRepository(
         resetPins: (PlacementEntity) -> Boolean,
     ): WeekPlan? {
         val cutoff = cutoffFor(weekStart, now) ?: return null
+        // 가용 시간에서 고정 일정만 뺀 것. 손으로 옮긴 자리가 아직 유효한지는 여기에 들어가는지로 본다.
+        val open = freeSlots(scheduleInput(cutoff, emptyList(), emptyList()))
         val (stale, kept) = placements.getBetween(weekStart, weekEndOf(weekStart)).partition {
-            it.copy(pinned = it.pinned && !resetPins(it)).isReplaceable(now.toLocalDate(), now.minuteOfDay())
+            val stillValid = open[it.date.dayOfWeek.value]?.fits(it.startMin, it.endMin) == true
+            it.copy(pinned = it.pinned && stillValid && !resetPins(it)).isReplaceable(now.toLocalDate(), now.minuteOfDay())
         }
         val specs = remainingSpecs(tasks.map { it.toSpec() }, kept.fulfilledCounts())
         return WeekPlan(stale.map { it.id }, schedule(scheduleInput(cutoff, specs, kept)))
