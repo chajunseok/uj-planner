@@ -4,6 +4,7 @@
 
 - **PRD**: `.claude/prd/2609/260918.uj-planner.prd.md`
 - **계획**: `.claude/plan/2609/260918.uj-planner.plan.md`
+- **디자인 의뢰문**: `.claude/design/2609/260918.uj-planner.design.md`
 - Application ID: `com.uj.planner` / minSdk 30 / compileSdk 36 / JDK 17
 
 ## Git 작업 규칙
