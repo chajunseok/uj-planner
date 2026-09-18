@@ -98,7 +98,7 @@ class EditViewModel(
 
     val canSave get() = !busy && if (kind == EditKind.FIXED) fixed.canSave else flex.canSave
 
-    fun save(onSaved: () -> Unit) = run(onSaved) {
+    fun save(onSaved: () -> Unit) = launchCatching(onSaved) {
         when (kind) {
             EditKind.FIXED -> repository.saveFixedEvents(
                 events = fixed.days.sorted().map { FixedEventEntity(0, fixed.title.trim(), it, fixed.startMin, fixed.durationMin) },
@@ -108,12 +108,12 @@ class EditViewModel(
         }
     }
 
-    fun delete(onDeleted: () -> Unit) = run(onDeleted) {
+    fun delete(onDeleted: () -> Unit) = launchCatching(onDeleted) {
         if (originalFixed.isNotEmpty()) repository.deleteFixedEvents(originalFixed)
         originalFlex?.let { repository.deleteFlexTask(it) }
     }
 
-    private fun run(onSuccess: () -> Unit, action: suspend () -> Unit) {
+    private fun launchCatching(onSuccess: () -> Unit, action: suspend () -> Unit) {
         if (busy) return
         busy = true
         viewModelScope.launch {
