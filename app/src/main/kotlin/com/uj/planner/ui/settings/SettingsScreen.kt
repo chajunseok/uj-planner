@@ -95,7 +95,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
             )
             OutlinedButton(
                 onClick = viewModel::replan,
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(18.dp),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
                 modifier = Modifier.fillMaxWidth().height(56.dp),
             ) {

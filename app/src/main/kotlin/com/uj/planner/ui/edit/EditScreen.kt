@@ -105,7 +105,7 @@ fun EditScreen(viewModel: EditViewModel, onClose: () -> Unit) {
                     Button(
                         onClick = { viewModel.save(onClose) },
                         enabled = viewModel.canSave,
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(18.dp),
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                     ) { Text(if (isFixed) "저장" else "저장하고 배치", style = MaterialTheme.typography.titleSmall) }
                     if (!viewModel.isNew) {

@@ -175,7 +175,7 @@ fun WeekGrid(
                             Modifier.offset(geometry.x(slot.dayOfWeek), geometry.y(start))
                                 .size(geometry.columnWidth, geometry.height(start, end))
                                 .padding(horizontal = 2.dp, vertical = 1.dp)
-                                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f), RoundedCornerShape(6.dp)),
+                                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f), RoundedCornerShape(BLOCK_RADIUS)),
                         )
                     }
                 }
@@ -184,7 +184,7 @@ fun WeekGrid(
                         Modifier.offset(geometry.x(t.dayOfWeek), geometry.y(t.startMin))
                             .size(geometry.columnWidth, geometry.height(t.startMin, t.endMin))
                             .padding(horizontal = 2.dp, vertical = 1.dp)
-                            .border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(6.dp)),
+                            .border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(BLOCK_RADIUS)),
                     )
                 }
             }

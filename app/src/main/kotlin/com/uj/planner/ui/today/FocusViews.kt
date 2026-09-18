@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.uj.planner.data.entity.PlacementStatus
 import com.uj.planner.ui.theme.PlannerColors
+import com.uj.planner.ui.theme.serif
 
 private val DOT_SHAPE = RoundedCornerShape(4.dp)
 
@@ -51,7 +52,7 @@ fun FocusText(focus: Focus, titleStyle: TextStyle, modifier: Modifier = Modifier
             }
             Text(focus.kicker, style = MaterialTheme.typography.labelMedium, color = accent, maxLines = 1)
         }
-        Text(focus.title, style = titleStyle, color = tint ?: MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(focus.title, style = titleStyle.serif(), color = tint ?: MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (focus.sub.isNotEmpty()) {
             Text(
                 focus.sub,

@@ -103,7 +103,7 @@ fun UnplacedBanner(items: List<UnplacedItem>, expanded: Boolean, onToggle: () ->
 @Composable
 fun UnplacedDetails(items: List<UnplacedItem>, onChangeConditions: (Long) -> Unit, onReplan: () -> Unit, modifier: Modifier = Modifier) {
     val scheme = MaterialTheme.colorScheme
-    val shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp)
+    val shape = RoundedCornerShape(bottomStart = 18.dp, bottomEnd = 18.dp)
     Surface(
         shape = shape,
         color = scheme.surfaceContainerLowest,
@@ -177,8 +177,8 @@ fun EmptyCard(onAddFixed: () -> Unit, onAddFlex: () -> Unit, modifier: Modifier 
         modifier = modifier.padding(start = 44.dp, end = 12.dp).fillMaxWidth().border(1.dp, scheme.surfaceVariant, shape),
     ) {
         Column(Modifier.padding(horizontal = 22.dp, vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.size(44.dp).background(scheme.surfaceVariant, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.ViewWeek, contentDescription = null, tint = scheme.onSurfaceVariant)
+            Box(Modifier.size(44.dp).background(PlannerColors.DoneContainer, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+                Icon(Icons.Outlined.ViewWeek, contentDescription = null, tint = PlannerColors.OnDoneContainer)
             }
             Text("먼저 움직이지 않는 일정을 넣어 주세요", fontSize = 18.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold)
             Text(

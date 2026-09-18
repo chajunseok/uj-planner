@@ -48,7 +48,9 @@ import com.uj.planner.ui.formatTime
 import com.uj.planner.ui.theme.BlockSubStyle
 import com.uj.planner.ui.theme.PlannerColors
 
-private val BLOCK_SHAPE = RoundedCornerShape(6.dp)
+/** 그리드 블록의 모서리. 끌기 자리 표시도 같은 값을 쓴다. */
+internal val BLOCK_RADIUS = 7.dp
+private val BLOCK_SHAPE = RoundedCornerShape(BLOCK_RADIUS)
 
 /** 한 시간 블록의 높이. 이보다 낮으면 2행(시작 시각)을 그리지 않는다. */
 private const val TWO_LINE_MIN = 60
@@ -63,7 +65,7 @@ val PlacementStatus?.label: String
     }
 
 /** 블록 바깥 둘레에 [gap] 만큼 띄워 그리는 둥근 테두리. 플렉스 타임라인의 못함 카드도 같은 점선을 쓴다. */
-internal fun DrawScope.outline(color: Color, width: Dp, gap: Dp = 0.dp, dashed: Boolean = false, radius: Dp = 6.dp) {
+internal fun DrawScope.outline(color: Color, width: Dp, gap: Dp = 0.dp, dashed: Boolean = false, radius: Dp = BLOCK_RADIUS) {
     val inset = width.toPx() / 2 - gap.toPx()
     drawRoundRect(
         color = color,

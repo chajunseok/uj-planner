@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Compose 가 그려지기 전에 보이는 색만 여기 둔다. 나머지 색은 ui/theme/Theme.kt 에 있다. -->
-    <color name="surface">#FBF9F6</color>
+    <color name="surface">#FBF7F2</color>
     <!-- 튤립 아트워크의 바탕색과 같은 값. 전경 비트맵의 가장자리가 배경과 이어지게 한다. -->
     <color name="ic_launcher_background">#FDF8F1</color>
 </resources>
