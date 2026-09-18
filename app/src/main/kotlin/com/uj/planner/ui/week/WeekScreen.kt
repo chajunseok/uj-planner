@@ -63,6 +63,8 @@ import com.uj.planner.ui.edit.EditKind
 import com.uj.planner.ui.formatDuration
 import com.uj.planner.ui.formatRange
 import com.uj.planner.ui.label
+import com.uj.planner.ui.missed.MissedSheet
+import com.uj.planner.ui.missed.MissedViewModel
 import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -85,7 +87,8 @@ fun rememberNow(): LocalDateTime {
  * @param onEdit 편집 화면으로. id 가 null 이면 새 일정.
  */
 @Composable
-fun WeekScreen(viewModel: WeekViewModel, onEdit: (EditKind, Long?) -> Unit) {
+fun WeekScreen(viewModel: WeekViewModel, missedViewModel: MissedViewModel, onEdit: (EditKind, Long?) -> Unit) {
+    MissedSheet(missedViewModel)
     val state = viewModel.state.collectAsStateWithLifecycle().value ?: return
     val freeSlots by viewModel.freeSlots.collectAsStateWithLifecycle()
     val now = rememberNow()

@@ -27,8 +27,15 @@ import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
 
-/** 밀린 일정을 처리한 결과. [moved] 는 새로 잡힌 자리, [unplaced] 는 빈칸이 없어 못 옮긴 일정이다. */
-data class ResolveResult(val moved: List<PlannedSlot>, val unplaced: List<Unplaced>)
+/**
+ * 밀린 일정을 처리한 결과. [moved] 는 새로 잡힌 자리, [unplaced] 는 빈칸이 없어 못 옮긴 일정이다.
+ * [movedIds] 는 [moved] 가 저장된 배치의 id 로, [PlannerRepository.undoResolve] 에 되돌려 준다.
+ */
+data class ResolveResult(
+    val moved: List<PlannedSlot> = emptyList(),
+    val unplaced: List<Unplaced> = emptyList(),
+    val movedIds: List<Long> = emptyList(),
+)
 
 /**
  * DAO 를 묶는 곳이자 **스케줄러를 호출하는 유일한 지점**이다.
@@ -186,14 +193,26 @@ class PlannerRepository(
             .filter { decisions[it.id] == PlacementStatus.MISSED && it.date >= weekStart }
             .groupingBy { it.flexTaskId }
             .eachCount()
-        if (missedCounts.isEmpty()) return@withTransaction ResolveResult(emptyList(), emptyList())
+        if (missedCounts.isEmpty()) return@withTransaction ResolveResult()
 
         val cutoff = checkNotNull(cutoffFor(weekStart, now)) { "이번 주에는 항상 절단점이 있다" }
         val specs = flexTasks.getAll().filter { it.id in missedCounts }.map { it.toSpec(times = missedCounts.getValue(it.id)) }
         val week = placements.getBetween(weekStart, weekEndOf(weekStart))
         val result = schedule(scheduleInput(cutoff, specs, week))
-        placements.insertAll(result.planned.map { PlacementEntity.from(it, weekStart) })
-        ResolveResult(result.planned, result.unplaced)
+        val ids = placements.insertAll(result.planned.map { PlacementEntity.from(it, weekStart) })
+        ResolveResult(result.planned, result.unplaced, ids)
+    }
+
+    /** [resolveMissed] 의 답 하나를 무른다. 그 답으로 새로 잡힌 자리([ResolveResult.movedIds])를 지우고 다시 확인 대기로 돌린다. */
+    suspend fun undoResolve(placementId: Long, movedIds: List<Long>) = db.withTransaction {
+        placements.deleteByIds(movedIds)
+        placements.setStatus(placementId, PlacementStatus.PLANNED)
+    }
+
+    /** `못함` 으로 답했지만 다시 넣을 빈칸이 없던 배치를 이번 주에서 포기한다. 포기한 횟수는 채운 것으로 쳐서 다시 배치하지 않는다. */
+    suspend fun dropMissed(placementId: Long) = db.withTransaction {
+        val placement = placements.getByIds(listOf(placementId)).singleOrNull()
+        if (placement?.status == PlacementStatus.MISSED) placements.setStatus(placementId, PlacementStatus.DROPPED)
     }
 
     private suspend fun writeThenRecompute(write: suspend () -> Unit) {

@@ -11,6 +11,7 @@ import com.uj.planner.data.PlannerRepository
 import com.uj.planner.ui.edit.EditKind
 import com.uj.planner.ui.edit.EditScreen
 import com.uj.planner.ui.edit.EditViewModel
+import com.uj.planner.ui.missed.MissedViewModel
 import com.uj.planner.ui.week.WeekScreen
 import com.uj.planner.ui.week.WeekViewModel
 
@@ -24,6 +25,7 @@ fun PlannerNavHost(repository: PlannerRepository) {
         composable("week") {
             WeekScreen(
                 viewModel = viewModel { WeekViewModel(repository) },
+                missedViewModel = viewModel { MissedViewModel(repository) },
                 onEdit = { kind, id -> nav.navigate("edit/${kind.name}?id=${id ?: NO_ID}") },
             )
         }
