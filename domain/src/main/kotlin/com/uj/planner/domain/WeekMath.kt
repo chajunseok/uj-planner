@@ -18,6 +18,14 @@ fun weekStartOf(date: LocalDate): LocalDate = date.with(TemporalAdjusters.previo
 /** [weekStart] 주의 일요일. */
 fun weekEndOf(weekStart: LocalDate): LocalDate = weekStart.plusDays(6)
 
+/**
+ * "9월 셋째 주" 의 (월, 몇째 주). 주는 목요일이 속한 달의 것으로 친다 — 달이 바뀌는 주가 두 달에 걸쳐 세어지지 않는다.
+ */
+fun weekOfMonth(weekStart: LocalDate): Pair<Int, Int> {
+    val thursday = weekStart.plusDays(3)
+    return thursday.monthValue to (thursday.dayOfMonth - 1) / 7 + 1
+}
+
 /** [weekStart] 주를 [now] 시점에 배치할 때의 절단점. 이미 지나간 주라 배치할 곳이 없으면 null. */
 fun cutoffFor(weekStart: LocalDate, now: LocalDateTime): Cutoff? {
     val thisWeek = weekStartOf(now.toLocalDate())

@@ -3,6 +3,7 @@ package com.uj.planner.data.dao
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 import com.uj.planner.data.entity.PlacementEntity
 import com.uj.planner.data.entity.PlacementStatus
 import kotlinx.coroutines.flow.Flow
@@ -37,10 +38,16 @@ interface PlacementDao {
     @Query("UPDATE placement SET status = :status WHERE id = :id")
     suspend fun setStatus(id: Long, status: PlacementStatus)
 
-    /** 아직 시작하지 않은 예정 배치만 지운다. 진행 중이거나 지나간 것, 완료·못함·버림은 남긴다. */
-    @Query(
-        "DELETE FROM placement WHERE status = 'PLANNED' AND date BETWEEN :from AND :to " +
-            "AND (date > :today OR (date = :today AND startMin >= :nowMin))",
-    )
-    suspend fun deleteUpcomingPlanned(from: LocalDate, to: LocalDate, today: LocalDate, nowMin: Int)
+    @Update
+    suspend fun update(placement: PlacementEntity)
+
+    @Query("DELETE FROM placement WHERE id IN (:ids)")
+    suspend fun deleteByIds(ids: Collection<Long>)
+
+    /** [date] 뒤의 예정 배치를 전부 지운다. 아직 오지 않은 주는 볼 때 다시 짜므로 손으로 옮긴 자리도 남기지 않는다. */
+    @Query("DELETE FROM placement WHERE status = 'PLANNED' AND date > :date")
+    suspend fun deletePlannedAfter(date: LocalDate)
+
+    @Query("UPDATE placement SET pinned = 0 WHERE flexTaskId = :flexTaskId")
+    suspend fun unpinTask(flexTaskId: Long)
 }

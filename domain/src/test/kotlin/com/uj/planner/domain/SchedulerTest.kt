@@ -193,6 +193,26 @@ class SchedulerTest {
     }
 
     @Test
+    fun `빈칸은 고정 일정과 기존 배치와 지난 시간을 뺀 나머지다`() {
+        val input = ScheduleInput(
+            availability = fullWeek,
+            fixed = listOf(FixedBlock(dayOfWeek = 3, startMin = 9 * 60, durationMin = 9 * 60)),
+            tasks = emptyList(),
+            existing = listOf(PlannedSlot(1, 3, 20 * 60, 21 * 60)),
+            fromDay = 3,
+            fromMin = 8 * 60 + 30,
+        )
+
+        val free = freeSlots(input)
+
+        assertEquals(setOf(3, 4, 5, 6, 7), free.keys)
+        val wednesday = free.getValue(3)
+        assertEquals(listOf(Slot(3, 8 * 60 + 30, 9 * 60), Slot(3, 18 * 60, 20 * 60), Slot(3, 21 * 60, 24 * 60)), wednesday)
+        assertTrue(wednesday.fits(18 * 60, 20 * 60))
+        assertTrue(!wednesday.fits(19 * 60 + 30, 20 * 60 + 30))
+    }
+
+    @Test
     fun `가변 일정의 말이 안 되는 조건은 생성 시점에 거부한다`() {
         assertFailsWith<IllegalArgumentException> { task(1, durationMin = 0) }
         assertFailsWith<IllegalArgumentException> { task(1, times = 8) }

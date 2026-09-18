@@ -32,7 +32,13 @@ data class PlacementEntity(
     val startMin: Int,
     val endMin: Int,
     val status: PlacementStatus = PlacementStatus.PLANNED,
+    /** 사용자가 손으로 옮긴 자리. 조건이 바뀌어 다시 짤 때도 지우지 않는다. */
+    val pinned: Boolean = false,
 ) {
+    /** 다시 짤 때 지우고 새로 놓아도 되는 배치 — 아직 시작하지 않았고 사용자가 손대지 않은 예정. */
+    fun isReplaceable(today: LocalDate, nowMin: Int): Boolean =
+        status == PlacementStatus.PLANNED && !pinned && (date > today || (date == today && startMin >= nowMin))
+
     fun toPlanned() = PlannedSlot(flexTaskId, date.dayOfWeek.value, startMin, endMin)
 
     companion object {
