@@ -19,5 +19,7 @@ data class ScheduleInput(
     init {
         require(fromDay in 1..7) { "fromDay 는 1..7 이어야 한다: $fromDay" }
         require(fromMin >= 0) { "fromMin 은 0 이상이어야 한다: $fromMin" }
+        // 같은 id 가 둘이면 한 일정이 서로 다른 길이로 여러 번 배치된다.
+        require(tasks.map { it.id }.distinct().size == tasks.size) { "tasks 에 중복 id 가 있다" }
     }
 }

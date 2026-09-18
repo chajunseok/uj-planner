@@ -162,10 +162,55 @@ class SchedulerTest {
     }
 
     @Test
-    fun `말이 안 되는 입력은 생성 시점에 거부한다`() {
+    fun `재배치 시작 요일이 마감보다 뒤면 예외 없이 unplaced 로 돌려준다`() {
+        val input = ScheduleInput(fullWeek, emptyList(), listOf(task(1, times = 2, deadline = 2)), fromDay = 4)
+
+        val result = schedule(input)
+
+        assertTrue(result.planned.isEmpty())
+        assertEquals(listOf(Unplaced(1, 2)), result.unplaced)
+    }
+
+    @Test
+    fun `가용 시간 밖의 기존 배치는 빈 구간에 영향을 주지 않는다`() {
+        val monday = listOf(Slot(1, 8 * 60, 10 * 60))
+        val outside = listOf(PlannedSlot(taskId = 9, dayOfWeek = 1, startMin = 6 * 60, endMin = 7 * 60))
+
+        val result = schedule(ScheduleInput(monday, emptyList(), listOf(task(1)), outside))
+
+        assertEquals(PlannedSlot(1, 1, 8 * 60, 9 * 60), result.planned.single())
+    }
+
+    @Test
+    fun `같은 요일의 가용 구간이 여러 개여도 겹쳐 배치하지 않는다`() {
+        val split = listOf(Slot(1, 8 * 60, 9 * 60), Slot(1, 13 * 60, 14 * 60))
+        val tasks = listOf(task(1), task(2), task(3))
+
+        val result = schedule(ScheduleInput(split, emptyList(), tasks))
+
+        assertEquals(setOf(8 * 60, 13 * 60), result.planned.map { it.startMin }.toSet())
+        assertEquals(1, result.unplaced.size)
+    }
+
+    @Test
+    fun `가변 일정의 말이 안 되는 조건은 생성 시점에 거부한다`() {
         assertFailsWith<IllegalArgumentException> { task(1, durationMin = 0) }
         assertFailsWith<IllegalArgumentException> { task(1, times = 8) }
+        assertFailsWith<IllegalArgumentException> { task(1, priority = 4) }
+        assertFailsWith<IllegalArgumentException> { task(1, deadline = 0) }
+    }
+
+    @Test
+    fun `비었거나 뒤집힌 구간은 생성 시점에 거부한다`() {
         assertFailsWith<IllegalArgumentException> { Slot(1, 600, 600) }
         assertFailsWith<IllegalArgumentException> { FixedBlock(8, 0, 60) }
+        assertFailsWith<IllegalArgumentException> { PlannedSlot(taskId = 1, dayOfWeek = 1, startMin = 700, endMin = 500) }
+    }
+
+    @Test
+    fun `같은 id 의 일정이 둘 들어오면 거부한다`() {
+        val sameId = listOf(task(1, durationMin = 60), task(1, durationMin = 90))
+
+        assertFailsWith<IllegalArgumentException> { ScheduleInput(fullWeek, emptyList(), sameId) }
     }
 }
