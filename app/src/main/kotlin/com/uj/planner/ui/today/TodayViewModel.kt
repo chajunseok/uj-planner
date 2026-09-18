@@ -6,6 +6,7 @@ import com.uj.planner.data.PlannerRepository
 import com.uj.planner.data.entity.FlexTaskEntity
 import com.uj.planner.data.entity.PlacementStatus
 import com.uj.planner.domain.minuteOfDay
+import com.uj.planner.ui.DAY_NAMES
 import com.uj.planner.ui.formatDuration
 import com.uj.planner.ui.formatRange
 import com.uj.planner.ui.formatTime
@@ -16,7 +17,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -69,7 +73,8 @@ class TodayViewModel(private val repository: PlannerRepository) : ViewModel() {
         clock,
         repository.observeFixedEvents(),
         repository.observeFlexTasks(),
-        repository.observeWeek(repository.currentWeekStart()),
+        // 앱을 켜 둔 채 일요일 자정을 넘기면 새 주를 다시 구독한다.
+        clock.map { repository.currentWeekStart() }.distinctUntilChanged().flatMapLatest(repository::observeWeek),
     ) { now, fixed, tasks, placements ->
         val today = now.toLocalDate()
         val nowMin = now.minuteOfDay()
@@ -101,7 +106,9 @@ class TodayViewModel(private val repository: PlannerRepository) : ViewModel() {
             focus = when {
                 overdue != null && overdueTask != null -> Focus(
                     Focus.Kind.OVERDUE,
-                    kicker = "${formatRange(overdue.startMin, overdue.endMin)} · 지났어요",
+                    // 오늘 것이 아니면 요일을 붙인다. 시각만으로는 언제 것인지 알 수 없다.
+                    kicker = (if (overdue.date == s.now.toLocalDate()) "" else "${DAY_NAMES[overdue.date.dayOfWeek.value - 1]} ") +
+                        "${formatRange(overdue.startMin, overdue.endMin)} · 지났어요",
                     title = overdueTask.title,
                     sub = "못함을 누르면 이번 주 빈칸에 다시 넣어요",
                     color = TaskColor.of(overdueTask.colorIndex),

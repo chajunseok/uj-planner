@@ -45,6 +45,7 @@ import com.uj.planner.ui.today.FocusPrimaryButton
 import com.uj.planner.ui.today.FocusText
 import com.uj.planner.ui.today.TodayItem
 import com.uj.planner.ui.today.TodayUiState
+import com.uj.planner.ui.week.label
 
 /** 힌지 위아래로 이만큼은 아무것도 두지 않는다. 접힌 자리는 굽어 있어서 글자와 버튼이 뭉개진다. */
 private val HINGE_KEEP_OUT = 16.dp
@@ -59,7 +60,7 @@ private val HINGE_KEEP_OUT = 16.dp
 fun FlexScreen(state: TodayUiState, hingeTop: Dp, hingeBottom: Dp, onAnswer: (Long, PlacementStatus) -> Unit) {
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
         Column {
-            Column(Modifier.height(hingeTop - HINGE_KEEP_OUT).statusBarsPadding().padding(horizontal = 20.dp)) {
+            Column(Modifier.height((hingeTop - HINGE_KEEP_OUT).coerceAtLeast(0.dp)).statusBarsPadding().padding(horizontal = 20.dp)) {
                 val date = state.now.toLocalDate()
                 Text("${DAY_NAMES[date.dayOfWeek.value - 1]}요일", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 12.dp))
                 Text(
@@ -71,7 +72,8 @@ fun FlexScreen(state: TodayUiState, hingeTop: Dp, hingeBottom: Dp, onAnswer: (Lo
                     state.items.forEach { TimelineRow(it) }
                 }
             }
-            Spacer(Modifier.height(hingeBottom - hingeTop + HINGE_KEEP_OUT * 2))
+            // 접히는 도중에는 힌지 좌표가 뒤집혀 올 수 있다. 음수 높이는 레이아웃에서 예외가 된다.
+            Spacer(Modifier.height((hingeBottom - hingeTop + HINGE_KEEP_OUT * 2).coerceAtLeast(0.dp)))
             Column(Modifier.fillMaxSize().navigationBarsPadding().padding(start = 20.dp, end = 20.dp, bottom = 24.dp)) {
                 FocusCard(state.focus, Modifier.weight(1f))
                 Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -147,7 +149,7 @@ private fun TimelineRow(item: TodayItem) {
                 PlacementStatus.DROPPED -> Icons.Rounded.Close
                 else -> null
             }
-            if (icon != null) Icon(icon, contentDescription = null, tint = fg, modifier = Modifier.size(18.dp))
+            if (icon != null) Icon(icon, contentDescription = item.status.label, tint = fg, modifier = Modifier.size(18.dp))
         }
     }
 }

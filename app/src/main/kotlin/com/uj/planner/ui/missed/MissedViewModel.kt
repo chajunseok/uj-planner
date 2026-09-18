@@ -61,14 +61,17 @@ class MissedViewModel(private val repository: PlannerRepository) : ViewModel() {
     private val mutex = Mutex()
 
     /**
-     * 앱에 들어올 때마다 부른다. 밀린 목록만 새로 읽고 "나중에" 만 푼다.
+     * 주간 화면이 보일 때마다 부른다. 밀린 목록만 새로 읽는다.
      * 결과 줄과 빈칸 없음 다이얼로그는 남긴다 — 화면이 잠깐 꺼졌다 켜져도 이 함수가 불리는데, 그때 다이얼로그를 지우면
      * 이미 `못함` 으로 저장된 그 배치를 어떻게 할지 다시 물을 길이 없어진다.
      */
     fun refresh() = launchLocked {
         val pending = loadPending()
-        _state.update { it.copy(pending = pending, dismissed = false, error = null) }
+        _state.update { it.copy(pending = pending, error = null) }
     }
+
+    /** 앱(또는 주간 화면)을 실제로 떠났다. "나중에" 를 풀어 다음에 들어올 때 다시 묻는다. */
+    fun undismiss() = _state.update { it.copy(dismissed = false) }
 
     fun answer(item: MissedItem, status: PlacementStatus) = launchLocked {
         if (_state.value.pending.none { it.placement.id == item.placement.id }) return@launchLocked
