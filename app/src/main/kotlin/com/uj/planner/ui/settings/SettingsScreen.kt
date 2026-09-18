@@ -35,11 +35,13 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.uj.planner.data.entity.DayAvailabilityEntity
@@ -76,8 +78,8 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Row(Modifier.padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                CopyButton("월 → 평일 전체") { viewModel.copy(from = 1, to = 1..5) }
-                CopyButton("토 → 주말") { viewModel.copy(from = 6, to = 6..7) }
+                CopyButton("월 → 평일 전체", enabled = days.isNotEmpty()) { viewModel.copy(from = 1, to = 1..5) }
+                CopyButton("토 → 주말", enabled = days.isNotEmpty()) { viewModel.copy(from = 6, to = 6..7) }
             }
 
             Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
@@ -88,7 +90,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                             day = day,
                             expanded = expandedDay == day.dayOfWeek,
                             onToggle = { expandedDay = if (expandedDay == day.dayOfWeek) 0 else day.dayOfWeek },
-                            onShift = { start, end -> viewModel.shift(day, start, end) },
+                            onShift = { start, end -> viewModel.shift(day.dayOfWeek, start, end) },
                         )
                     }
                 }
@@ -121,12 +123,13 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
 @Composable
 private fun appVersion(): String {
     val context = LocalContext.current
-    return context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
+    // 버전 줄 하나 때문에 설정 화면이 죽지 않게 한다. 못 읽으면 비워 둔다.
+    return remember { runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty() }
 }
 
 @Composable
-private fun CopyButton(text: String, onClick: () -> Unit) {
-    OutlinedButton(onClick = onClick, modifier = Modifier.heightIn(min = 40.dp)) {
+private fun CopyButton(text: String, enabled: Boolean, onClick: () -> Unit) {
+    OutlinedButton(onClick = onClick, enabled = enabled, modifier = Modifier.heightIn(min = 40.dp)) {
         Icon(Icons.Rounded.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
         Text(text, Modifier.padding(start = 6.dp), style = MaterialTheme.typography.labelMedium)
     }
@@ -137,7 +140,7 @@ private fun DayRow(day: DayAvailabilityEntity, expanded: Boolean, onToggle: () -
     val weekend = day.dayOfWeek >= 6
     Column {
         Row(
-            Modifier.fillMaxWidth().clickable(onClick = onToggle).heightIn(min = 56.dp).padding(horizontal = 16.dp),
+            Modifier.fillMaxWidth().clickable(onClickLabel = if (expanded) "접기" else "펼치기", role = Role.Button, onClick = onToggle).heightIn(min = 56.dp).padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(

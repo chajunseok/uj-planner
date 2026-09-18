@@ -81,7 +81,8 @@ class WeekViewModel(private val repository: PlannerRepository) : ViewModel() {
             WeekUiState(
                 weekStart = start,
                 thisWeekStart = thisWeek,
-                blocks = blocks,
+                // 못함·버림은 자리를 비운 것이라 그 위에 새 배치가 놓일 수 있다. 먼저 그려서 살아 있는 블록이 위로 오게 한다.
+                blocks = blocks.sortedBy { it.status != PlacementStatus.MISSED && it.status != PlacementStatus.DROPPED },
                 // 지나간 주는 다시 짤 수 없으니 못 넣은 횟수를 알려도 할 수 있는 일이 없다.
                 unplaced = if (start < thisWeek) emptyList() else unplaced.mapNotNull { u ->
                     tasksById[u.taskId]?.let { UnplacedItem(it, u.missing) }
