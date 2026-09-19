@@ -104,7 +104,7 @@ domain/src/main/kotlin/com/uj/planner/domain/
 
 app/src/main/kotlin/com/uj/planner/
 ├── PlannerApp.kt   Application — 의존성 수동 조립
-├── data/           entity/ dao/ Converters PlannerDatabase PlannerRepository
+├── data/           entity/ dao/ Converters PlannerDatabase PlannerRepository Backup
 └── ui/             PlannerNavHost, AdaptiveHost + week/ edit/ settings/ missed/ today/ cover/ flex/ components/ theme/
 ```
 
@@ -124,6 +124,7 @@ Room DAO (Flow) → Repository → ViewModel (StateFlow) → Composable
 | 배치 결과 | `Placement` 테이블에 **저장한다.** 조회할 때마다 계산하지 않는다 |
 | 화면 이동 | Navigation Compose. 목적지는 `week` / `edit/{kind}?id={id}` / `settings` 셋 |
 | 테마 | 라이트 단일. 시스템 다크 모드를 따라가지 않는다 |
+| 내보내기·가져오기 | `Backup` 이 DB 파일을 통째로 다룬다. 가져오기는 DB 를 닫고 파일을 바꾼 뒤 **앱을 다시 시작한다** — 열려 있는 Room 인스턴스를 살려 두지 않는다 |
 | 커버 화면 | 네비게이션 스택을 갖지 않는다. `AdaptiveHost` 가 그 위에서 갈라낸다 |
 | 커버·플렉스 | "지금 할 차례" 판정은 `TodayViewModel` 한 곳. 두 화면은 같은 `Focus` 를 글자 크기만 달리해 그린다 |
 

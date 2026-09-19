@@ -30,8 +30,10 @@ abstract class PlannerDatabase : RoomDatabase() {
     abstract fun availability(): AvailabilityDao
 
     companion object {
+        const val FILE_NAME = "planner.db"
+
         fun create(context: Context): PlannerDatabase =
-            Room.databaseBuilder(context, PlannerDatabase::class.java, "planner.db")
+            Room.databaseBuilder(context, PlannerDatabase::class.java, FILE_NAME)
                 .addCallback(SeedDefaultAvailability)
                 .build()
     }

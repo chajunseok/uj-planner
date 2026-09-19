@@ -7,6 +7,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.uj.planner.data.Backup
 import com.uj.planner.data.PlannerRepository
 import com.uj.planner.ui.edit.EditKind
 import com.uj.planner.ui.edit.EditScreen
@@ -21,7 +22,7 @@ private const val NO_ID = -1L
 
 /** 목적지는 week / edit / settings 셋. ViewModel 은 DI 없이 여기서 repository 를 넘겨 만든다. */
 @Composable
-fun PlannerNavHost(repository: PlannerRepository, nav: NavHostController) {
+fun PlannerNavHost(repository: PlannerRepository, backup: Backup, nav: NavHostController) {
     NavHost(nav, startDestination = "week") {
         composable("week") {
             WeekScreen(
@@ -44,7 +45,7 @@ fun PlannerNavHost(repository: PlannerRepository, nav: NavHostController) {
             EditScreen(viewModel { EditViewModel(repository, kind, id) }, onClose = { nav.popBackStack() })
         }
         composable("settings") {
-            SettingsScreen(viewModel { SettingsViewModel(repository) }, onBack = { nav.popBackStack() })
+            SettingsScreen(viewModel { SettingsViewModel(repository, backup) }, onBack = { nav.popBackStack() })
         }
     }
 }
