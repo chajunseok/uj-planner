@@ -1,12 +1,14 @@
 package com.uj.planner.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.uj.planner.PlannerApp
 import com.uj.planner.data.PlannerRepository
 import com.uj.planner.ui.edit.EditKind
 import com.uj.planner.ui.edit.EditScreen
@@ -44,7 +46,8 @@ fun PlannerNavHost(repository: PlannerRepository, nav: NavHostController) {
             EditScreen(viewModel { EditViewModel(repository, kind, id) }, onClose = { nav.popBackStack() })
         }
         composable("settings") {
-            SettingsScreen(viewModel { SettingsViewModel(repository) }, onBack = { nav.popBackStack() })
+            val backup = (LocalContext.current.applicationContext as PlannerApp).backup
+            SettingsScreen(viewModel { SettingsViewModel(repository, backup) }, onBack = { nav.popBackStack() })
         }
     }
 }

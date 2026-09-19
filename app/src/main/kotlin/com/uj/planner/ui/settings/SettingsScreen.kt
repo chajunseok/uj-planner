@@ -1,5 +1,10 @@
 package com.uj.planner.ui.settings
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -21,8 +26,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.FileDownload
+import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material.icons.rounded.Autorenew
 import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -30,14 +39,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -52,6 +64,8 @@ import com.uj.planner.ui.components.Stepper
 import com.uj.planner.ui.components.outlinedBox
 import com.uj.planner.ui.formatTime
 import com.uj.planner.ui.theme.PlannerColors
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 private const val MIDNIGHT = 24 * 60
 
@@ -61,6 +75,13 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
     val message by viewModel.message.collectAsStateWithLifecycle()
     // 한 번에 한 요일만 펼친다. 0 은 모두 접힘.
     var expandedDay by rememberSaveable { mutableIntStateOf(0) }
+    val context = LocalContext.current
+    // 가져올 파일을 골랐고 아직 확인을 받지 않았다.
+    var pendingImport by rememberSaveable { mutableStateOf<Uri?>(null) }
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
+        if (uri != null) viewModel.export(uri)
+    }
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> pendingImport = uri }
 
     Scaffold(topBar = { ScreenHeader("설정", Icons.AutoMirrored.Rounded.ArrowBack, "뒤로", onBack) }) { padding ->
         Column(Modifier.padding(padding).fillMaxSize().padding(horizontal = 20.dp)) {
@@ -73,8 +94,8 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     color = PlannerColors.Muted,
                 )
                 Row(Modifier.padding(top = 14.dp, bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    CopyButton("월 → 평일 전체", enabled = days.isNotEmpty()) { viewModel.copy(from = 1, to = 1..5) }
-                    CopyButton("토 → 주말", enabled = days.isNotEmpty()) { viewModel.copy(from = 6, to = 6..7) }
+                    PillButton(Icons.Outlined.ContentCopy, "월 → 평일 전체", enabled = days.isNotEmpty()) { viewModel.copy(from = 1, to = 1..5) }
+                    PillButton(Icons.Outlined.ContentCopy, "토 → 주말", enabled = days.isNotEmpty()) { viewModel.copy(from = 6, to = 6..7) }
                 }
                 days.forEach { day ->
                     DayRow(
@@ -84,6 +105,18 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                         onShift = { start, end -> viewModel.shift(day.dayOfWeek, start, end) },
                     )
                     HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                }
+
+                Text("데이터", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 28.dp, bottom = 6.dp))
+                Text(
+                    "일정과 기록은 이 기기에만 있어요. 폰을 바꾸거나 앱을 지우기 전에 파일로 내보내 두세요.",
+                    fontSize = 13.sp,
+                    lineHeight = 20.sp,
+                    color = PlannerColors.Muted,
+                )
+                Row(Modifier.padding(top = 14.dp, bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PillButton(Icons.Outlined.FileUpload, "내보내기") { exportLauncher.launch("uj-planner-${LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE)}.db") }
+                    PillButton(Icons.Outlined.FileDownload, "가져오기") { importLauncher.launch(arrayOf("*/*")) }
                 }
             }
 
@@ -110,6 +143,38 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
             )
         }
     }
+
+    pendingImport?.let { uri ->
+        AlertDialog(
+            onDismissRequest = { pendingImport = null },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text("지금 데이터를 파일의 내용으로 바꿀까요?", style = MaterialTheme.typography.titleLarge) },
+            text = {
+                Text("지금 있는 일정과 기록은 모두 사라지고 되돌릴 수 없어요. 바꾼 뒤에는 앱이 다시 시작돼요.", fontSize = 14.sp, lineHeight = 22.sp, color = PlannerColors.Body)
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        pendingImport = null
+                        viewModel.import(uri) { restartApp(context) }
+                    },
+                    modifier = Modifier.height(44.dp),
+                ) { Text("가져오기", style = MaterialTheme.typography.labelLarge) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingImport = null }, modifier = Modifier.height(44.dp)) { Text("취소", style = MaterialTheme.typography.labelLarge) }
+            },
+        )
+    }
+}
+
+/** 가져오기 뒤에는 DB 가 닫혀 있다. 열어 둔 화면과 ViewModel 을 모두 버리고 새로 시작한다. */
+// ponytail: 시작 요청을 보낸 뒤 프로세스를 끝낸다. 드물게 다시 뜨지 않는 기기가 있으면 별도 프로세스에서 다시 띄우는 방식으로 바꾼다.
+private fun restartApp(context: Context) {
+    val intent = checkNotNull(context.packageManager.getLaunchIntentForPackage(context.packageName))
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+    context.startActivity(intent)
+    Runtime.getRuntime().exit(0)
 }
 
 @Composable
@@ -120,7 +185,7 @@ private fun appVersion(): String {
 }
 
 @Composable
-private fun CopyButton(text: String, enabled: Boolean, onClick: () -> Unit) {
+private fun PillButton(icon: ImageVector, text: String, enabled: Boolean = true, onClick: () -> Unit) {
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,
@@ -129,7 +194,7 @@ private fun CopyButton(text: String, enabled: Boolean, onClick: () -> Unit) {
         contentPadding = PaddingValues(horizontal = 14.dp),
         modifier = Modifier.height(40.dp),
     ) {
-        Icon(Icons.Outlined.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
+        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
         Text(text, Modifier.padding(start = 6.dp), style = MaterialTheme.typography.labelMedium)
     }
 }
