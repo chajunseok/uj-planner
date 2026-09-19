@@ -143,6 +143,23 @@ find . -name "*.kt" -not -path "*/build/*" | xargs wc -l | awk '$1 > 500 && $2 !
 
 커밋 전에 최소한 `:domain:test` 와 `:app:assembleDebug` 가 통과하고, 500줄 검사 출력이 비어 있어야 한다.
 
+## 릴리스 빌드와 서명
+
+```bash
+./tools/make-release-key.sh        # 한 번만. 키는 ~/.uj-planner/release.jks, 설정은 keystore.properties (둘 다 레포 밖/ gitignore)
+./gradlew :app:assembleRelease     # app/build/outputs/apk/release/app-release.apk
+```
+
+| 규칙 | |
+|---|---|
+| 키와 비밀번호 | **레포에 두지 않는다.** public 레포다. `*.jks` · `keystore.properties` 는 gitignore 되어 있다 |
+| 키를 잃으면 | 같은 앱으로 업데이트할 수 없다. 새 키의 APK 는 덮어 설치가 안 돼 앱을 지워야 하고, 데이터는 설정의 내보내기·가져오기로만 옮길 수 있다 |
+| 업데이트 배포 | `versionCode` 를 올린다. 같거나 낮으면 덮어 설치가 거부된다 |
+| 디버그 ↔ 릴리스 | 서명이 달라 서로 덮어 설치되지 않는다. 실사용 기기에는 처음부터 릴리스 APK 를 깐다 |
+| 코드 축소 | 릴리스만 R8 축소를 켠다(아이콘 라이브러리 때문에 끄면 47MB). 릴리스에서만 나는 문제는 축소 규칙부터 의심한다 |
+
+`keystore.properties` 가 없으면 릴리스 빌드는 서명 없이 나온다. 디버그 빌드와 검증 명령은 영향받지 않는다.
+
 ## 에뮬레이터
 
 ```bash
