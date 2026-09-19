@@ -94,15 +94,16 @@ class SettingsViewModel(private val repository: PlannerRepository, private val b
             return
         }
         viewModelScope.launch {
-            try {
-                backup.importFrom(source)
-                restart()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: BackupException) {
-                _message.value = e.message
-            } catch (e: Exception) {
-                restart()
+            // 시작했으면 화면을 떠나도 끝까지 간다. 중간에 취소되면 DB 는 닫혔는데 다시 시작은 안 된 채로 남는다.
+            withContext(NonCancellable) {
+                try {
+                    backup.importFrom(source)
+                    restart()
+                } catch (e: BackupException) {
+                    _message.value = e.message
+                } catch (e: Exception) {
+                    restart()
+                }
             }
         }
     }

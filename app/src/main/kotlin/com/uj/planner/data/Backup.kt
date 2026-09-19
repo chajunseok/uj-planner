@@ -4,6 +4,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteException
 import android.net.Uri
+import android.provider.DocumentsContract
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -28,6 +29,10 @@ class Backup(private val context: Context, private val database: PlannerDatabase
             database.openHelper.writableDatabase.execSQL("VACUUM INTO '${snapshot.absolutePath.replace("'", "''")}'")
             val out = context.contentResolver.openOutputStream(target, "wt") ?: throw IOException("파일을 열지 못했어요")
             out.use { snapshot.inputStream().use { input -> input.copyTo(it) } }
+        } catch (e: Exception) {
+            // 저장 위치를 고르는 순간 빈 파일이 이미 만들어져 있다. 실패했으면 반쯤 쓰인 파일을 남기지 않는다.
+            runCatching { DocumentsContract.deleteDocument(context.contentResolver, target) }
+            throw e
         } finally {
             snapshot.delete()
         }
@@ -43,11 +48,15 @@ class Backup(private val context: Context, private val database: PlannerDatabase
         val incoming = File(dbFile.parentFile, "import.db")
         incoming.delete()
         try {
-            val input = context.contentResolver.openInputStream(source) ?: throw BackupException("파일을 열지 못했어요")
+            // 여기까지는 DB 를 건드리지 않는다. 실패는 모두 BackupException 으로 바꿔 "아무것도 안 바뀐 실패" 임을 알린다.
+            // 파일을 고른 뒤 프로세스가 다시 만들어지면 읽기 권한이 사라져 SecurityException 이 난다.
             try {
+                val input = context.contentResolver.openInputStream(source) ?: throw BackupException("파일을 열지 못했어요")
                 input.use { copyLimited(it, incoming) }
             } catch (e: IOException) {
                 throw BackupException("파일을 읽지 못했어요")
+            } catch (e: SecurityException) {
+                throw BackupException("파일을 읽을 권한이 없어요. 파일을 다시 골라 주세요")
             }
             verify(incoming)
             database.close()
@@ -73,6 +82,7 @@ class Backup(private val context: Context, private val database: PlannerDatabase
         }
     }
 
+    // 구조만 본다. 앱의 내보내기가 아니라 파일 관리자로 planner.db 본체만 복사한 파일도 통과하는데, 그런 파일은 최근 쓰기가 빠져 있을 수 있다.
     // ponytail: 지금은 DB 버전이 하나뿐이라 버전과 구조가 지금과 똑같은 파일만 받는다.
     // 버전 2 와 마이그레이션이 생기면 옛 버전 파일도 받아서 Room 이 다음 실행 때 올리도록 푼다.
     private fun verify(file: File) {
@@ -85,7 +95,7 @@ class Backup(private val context: Context, private val database: PlannerDatabase
                 val current = database.openHelper.readableDatabase
                 if (db.version > current.version) throw BackupException("더 새 버전의 앱에서 내보낸 파일이에요. 앱을 먼저 업데이트해 주세요")
                 val currentHash = current.query(IDENTITY_HASH).use { if (it.moveToFirst()) it.getString(0) else null }
-                if (db.version != current.version || db.single(IDENTITY_HASH) != currentHash) throw BackupException(NOT_OURS)
+                if (db.version != current.version || currentHash == null || db.single(IDENTITY_HASH) != currentHash) throw BackupException(NOT_OURS)
             }
         } catch (e: SQLiteException) {
             throw BackupException(NOT_OURS)

@@ -14,6 +14,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import androidx.window.layout.FoldingFeature
 import androidx.window.layout.WindowInfoTracker
+import com.uj.planner.data.Backup
 import com.uj.planner.data.PlannerRepository
 import com.uj.planner.ui.cover.CoverScreen
 import com.uj.planner.ui.flex.FlexScreen
@@ -31,7 +32,7 @@ private val COVER_MAX = 480.dp
  * 내비게이션 컨트롤러는 갈림길 위에서 만든다. 접었다 펴도 보던 화면과 입력하던 폼이 남아 있어야 하기 때문이다.
  */
 @Composable
-fun AdaptiveHost(repository: PlannerRepository) {
+fun AdaptiveHost(repository: PlannerRepository, backup: Backup) {
     val activity = checkNotNull(LocalActivity.current)
     val layoutInfo by remember(activity) { WindowInfoTracker.getOrCreate(activity).windowLayoutInfo(activity) }
         .collectAsStateWithLifecycle(initialValue = null)
@@ -44,7 +45,7 @@ fun AdaptiveHost(repository: PlannerRepository) {
             it.state == FoldingFeature.State.HALF_OPENED && it.orientation == FoldingFeature.Orientation.HORIZONTAL
         }
         if (!isCover && hinge == null) {
-            PlannerNavHost(repository, nav)
+            PlannerNavHost(repository, backup, nav)
             return@BoxWithConstraints
         }
         val state = today.state.collectAsStateWithLifecycle().value ?: return@BoxWithConstraints
