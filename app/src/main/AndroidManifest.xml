@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- allowBackup=false: 로컬 전용 앱이다. 일정 DB 를 클라우드 자동 백업에 싣지 않는다.
+         Android 12+ 에서는 이 값이 클라우드 백업만 끄고 기기 간 직접 전송은 남긴다 — 의도한 동작이다.
+         lint 의 DataExtractionRules 경고는 이 때문에 그대로 둔다. -->
+    <application
+        android:name=".PlannerApp"
+        android:label="U.J planner"
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:theme="@style/Theme.UjPlanner">
+
+        <!-- resizeableActivity: 접힘·커버 전환 시 창 크기 변화를 받기 위해 필수 -->
+        <activity
+            android:name=".MainActivity"
+            android:label="U.J"
+            android:exported="true"
+            android:resizeableActivity="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

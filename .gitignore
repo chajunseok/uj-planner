@@ -21,3 +21,9 @@ captures/
 
 # Claude Code — 머신 고유 설정
 .claude/settings.local.json
+
+# 서명 — public 레포라 서명 설정을 붙이기 전에 미리 막아 둔다
+*.jks
+*.keystore
+keystore.properties
+key.properties
