@@ -21,15 +21,6 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.Bedtime
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.LightMode
-import androidx.compose.material.icons.outlined.WbTwilight
-import androidx.compose.material.icons.rounded.AllInclusive
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -70,6 +61,7 @@ import com.uj.planner.ui.components.Stepper
 import com.uj.planner.ui.components.TimeStepper
 import com.uj.planner.ui.formatRange
 import com.uj.planner.ui.formatTime
+import com.uj.planner.ui.icons.UjIcons
 import com.uj.planner.ui.label
 import com.uj.planner.ui.theme.PlannerColors
 import com.uj.planner.ui.theme.TaskColor
@@ -79,10 +71,10 @@ private val PRIORITY_LABELS = mapOf(1 to "낮음", 2 to "보통", 3 to "높음")
 
 private val Window.icon
     get() = when (this) {
-        Window.MORNING -> Icons.Outlined.WbTwilight
-        Window.AFTERNOON -> Icons.Outlined.LightMode
-        Window.EVENING -> Icons.Outlined.Bedtime
-        Window.ANY -> Icons.Rounded.AllInclusive
+        Window.MORNING -> UjIcons.WbTwilight
+        Window.AFTERNOON -> UjIcons.LightMode
+        Window.EVENING -> UjIcons.Bedtime
+        Window.ANY -> UjIcons.AllInclusive
     }
 
 @Composable
@@ -91,7 +83,7 @@ fun EditScreen(viewModel: EditViewModel, onClose: () -> Unit) {
     val editingTitle = if (isFixed) viewModel.fixed.title else viewModel.flex.title
 
     Scaffold(
-        topBar = { ScreenHeader(if (viewModel.isNew) "새 일정" else "$editingTitle 편집", Icons.Rounded.Close, "닫기", onClose) },
+        topBar = { ScreenHeader(if (viewModel.isNew) "새 일정" else "$editingTitle 편집", UjIcons.Close, "닫기", onClose) },
         bottomBar = {
             Column(Modifier.background(MaterialTheme.colorScheme.surfaceContainer)) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
@@ -115,7 +107,7 @@ fun EditScreen(viewModel: EditViewModel, onClose: () -> Unit) {
                             colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onErrorContainer),
                             modifier = Modifier.fillMaxWidth().height(48.dp),
                         ) {
-                            Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Icon(UjIcons.Delete, contentDescription = null, modifier = Modifier.size(20.dp))
                             Text("이 일정 삭제", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = 6.dp))
                         }
                     }
@@ -231,7 +223,7 @@ private fun ColorGrid(selected: Int, onSelect: (Int) -> Unit) {
                             .semantics { contentDescription = color.label },
                         contentAlignment = Alignment.Center,
                     ) {
-                        if (on) Icon(Icons.Rounded.Check, contentDescription = null, tint = color.fg, modifier = Modifier.size(16.dp))
+                        if (on) Icon(UjIcons.Check, contentDescription = null, tint = color.fg, modifier = Modifier.size(16.dp))
                     }
                 }
             }
@@ -312,7 +304,7 @@ private fun PreviewLine(text: Pair<String, String>) {
         Modifier.padding(top = 20.dp).fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainer, FieldShape).padding(horizontal = 14.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 1.dp).size(18.dp))
+        Icon(UjIcons.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 1.dp).size(18.dp))
         Text(
             buildAnnotatedString {
                 append(text.first)

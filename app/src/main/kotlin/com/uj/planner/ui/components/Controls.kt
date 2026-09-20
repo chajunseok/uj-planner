@@ -22,10 +22,6 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -51,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.uj.planner.domain.GRID_MIN
 import com.uj.planner.ui.formatDuration
+import com.uj.planner.ui.icons.UjIcons
 import com.uj.planner.ui.theme.PlannerColors
 
 /** 입력칸·스테퍼·시각 칸이 같이 쓰는 모서리. */
@@ -109,14 +106,14 @@ fun Stepper(
     stepLabel: String = "",
 ) {
     Row(modifier.height(56.dp).outlinedBox(), verticalAlignment = Alignment.CenterVertically) {
-        StepCell(Icons.Rounded.Remove, "$stepLabel 줄이기", minusEnabled, onMinus)
+        StepCell(UjIcons.Remove, "$stepLabel 줄이기", minusEnabled, onMinus)
         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.Bottom) {
             Text(value, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleLarge)
             if (unit.isNotEmpty()) {
                 Text(unit, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium, color = PlannerColors.Muted, modifier = Modifier.padding(start = 2.dp, bottom = 3.dp))
             }
         }
-        StepCell(Icons.Rounded.Add, "$stepLabel 늘리기", plusEnabled, onPlus)
+        StepCell(UjIcons.Add, "$stepLabel 늘리기", plusEnabled, onPlus)
     }
 }
 
@@ -128,9 +125,9 @@ fun TimeStepper(value: String, onMinus: () -> Unit, onPlus: () -> Unit, minusEna
             Text(value, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleLarge)
         }
         Row(Modifier.outlinedBox()) {
-            StepCell(Icons.Rounded.Remove, "$stepLabel 30분 앞으로", minusEnabled, onMinus, caption = "30분", width = 56.dp)
+            StepCell(UjIcons.Remove, "$stepLabel 30분 앞으로", minusEnabled, onMinus, caption = "30분", width = 56.dp)
             Divider()
-            StepCell(Icons.Rounded.Add, "$stepLabel 30분 뒤로", plusEnabled, onPlus, caption = "30분", width = 56.dp)
+            StepCell(UjIcons.Add, "$stepLabel 30분 뒤로", plusEnabled, onPlus, caption = "30분", width = 56.dp)
         }
     }
 }
@@ -180,7 +177,7 @@ fun <T> Segmented(
     Row(modifier.fillMaxWidth().height(height).outlinedBox(shape).selectableGroup()) {
         options.forEachIndexed { i, option ->
             if (i > 0) Divider()
-            SegmentCell(label(option), option == selected, { onSelect(option) }, if (checkSelected) Icons.Rounded.Check.takeIf { option == selected } else icon?.invoke(option), big = checkSelected)
+            SegmentCell(label(option), option == selected, { onSelect(option) }, if (checkSelected) UjIcons.Check.takeIf { option == selected } else icon?.invoke(option), big = checkSelected)
         }
     }
 }

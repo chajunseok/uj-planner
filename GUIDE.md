@@ -31,7 +31,7 @@ U.J planner 를 **내 폰에 설치하고 업데이트하는 방법**이다. 앱
 ./gradlew :app:assembleRelease
 ```
 
-결과물은 `app/build/outputs/apk/release/app-release.apk` (약 3MB). 첫 빌드는 코드 축소 때문에 10분 넘게 걸릴 수 있다.
+결과물은 `app/build/outputs/apk/release/app-release.apk` (약 1.5MB). 첫 빌드는 코드 축소 때문에 10분 넘게 걸릴 수 있다.
 
 `app-release-unsigned.apk` 가 나왔다면 1번을 건너뛴 것이다. 서명 없는 APK 는 설치되지 않는다.
 

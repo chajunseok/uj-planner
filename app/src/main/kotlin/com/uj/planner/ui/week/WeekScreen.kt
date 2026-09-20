@@ -14,11 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -44,6 +39,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.uj.planner.domain.weekEndOf
 import com.uj.planner.domain.weekOfMonth
 import com.uj.planner.ui.edit.EditKind
+import com.uj.planner.ui.icons.UjIcons
 import com.uj.planner.ui.missed.MissedSheet
 import com.uj.planner.ui.missed.MissedViewModel
 import com.uj.planner.ui.theme.PlannerColors
@@ -175,7 +171,7 @@ private fun WeekHeader(weekStart: LocalDate, isThisWeek: Boolean, onSettings: ()
                 color = PlannerColors.Muted,
             )
         }
-        IconButton(onClick = onSettings) { Icon(Icons.Outlined.Settings, "설정", tint = PlannerColors.Body) }
+        IconButton(onClick = onSettings) { Icon(UjIcons.Settings, "설정", tint = PlannerColors.Body) }
     }
 }
 
@@ -195,13 +191,13 @@ private fun WeekBottomBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                IconButton(onClick = onPrevious) { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, "이전 주", tint = PlannerColors.Body) }
+                IconButton(onClick = onPrevious) { Icon(UjIcons.KeyboardArrowLeft, "이전 주", tint = PlannerColors.Body) }
                 ThisWeekPill(enabled = !isThisWeek, onClick = onThisWeek)
-                IconButton(onClick = onNext) { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, "다음 주", tint = PlannerColors.Body) }
+                IconButton(onClick = onNext) { Icon(UjIcons.KeyboardArrowRight, "다음 주", tint = PlannerColors.Body) }
                 Spacer(Modifier.weight(1f))
                 ExtendedFloatingActionButton(
                     onClick = onAdd,
-                    icon = { Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(22.dp)) },
+                    icon = { Icon(UjIcons.Add, contentDescription = null, modifier = Modifier.size(22.dp)) },
                     text = { Text("일정", style = MaterialTheme.typography.labelLarge) },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
