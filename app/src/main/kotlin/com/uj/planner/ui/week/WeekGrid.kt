@@ -55,11 +55,17 @@ import java.time.LocalDateTime
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
-/** 30분 한 행의 높이. 08–24시가 704dp 로 한 화면에 들어오게 잡은 값이다. */
-private val ROW_HEIGHT = 22.dp
+/**
+ * 30분 한 행의 **최소** 높이. 실제 높이는 남는 높이에 맞춰 늘어난다 — [WeekGrid] 참고.
+ *
+ * 이 값 아래로는 줄이지 않는다. 블록의 2행(시작 시각)이 높이 44dp 부터 나오고, 그보다 얇아지면
+ * 손가락으로 집기도 어렵다. 높이가 모자라면 줄이는 대신 스크롤한다.
+ */
+private val MIN_ROW_HEIGHT = 22.dp
 private val AXIS_WIDTH = 32.dp
 private val GRID_END_PADDING = 8.dp
 private val GRID_TOP_PADDING = 8.dp
+private val GRID_BOTTOM_PADDING = 16.dp
 private val DETAIL_CARD_WIDTH = 196.dp
 
 /** 옮기는 중인 블록이 지금 가리키는 자리. [valid] 가 false 면 거기엔 놓을 수 없다. */
@@ -67,9 +73,9 @@ data class MoveTarget(val block: WeekBlock, val dayOfWeek: Int, val startMin: In
     val endMin get() = startMin + block.endMin - block.startMin
 }
 
-private class GridGeometry(val columnWidth: Dp, private val gridStartMin: Int) {
+private class GridGeometry(val columnWidth: Dp, val rowHeight: Dp, private val gridStartMin: Int) {
     fun x(dayOfWeek: Int): Dp = AXIS_WIDTH + columnWidth * (dayOfWeek - 1)
-    fun y(min: Int): Dp = ROW_HEIGHT * ((min - gridStartMin) / GRID_MIN.toFloat())
+    fun y(min: Int): Dp = rowHeight * ((min - gridStartMin) / GRID_MIN.toFloat())
     fun height(startMin: Int, endMin: Int): Dp = y(endMin) - y(startMin)
 }
 
@@ -132,24 +138,32 @@ fun WeekGrid(
     detail: @Composable (WeekBlock) -> Unit,
 ) {
     val density = LocalDensity.current
-    val gridHeight = ROW_HEIGHT * ((state.gridEndMin - state.gridStartMin) / GRID_MIN)
 
-    BoxWithConstraints(modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+    // 스크롤을 안쪽에 둔다. 스크롤 모디파이어는 안의 내용에 무한 높이를 주므로, 창 높이는 그 바깥에서 재야 한다.
+    BoxWithConstraints(modifier.fillMaxWidth()) {
         val gridWidth = maxWidth
-        val geometry = GridGeometry((gridWidth - AXIS_WIDTH - GRID_END_PADDING) / 7, state.gridStartMin)
+        val rows = (state.gridEndMin - state.gridStartMin) / GRID_MIN
+        // 남는 높이가 있으면 행을 늘려 하루가 화면을 채우게 한다. 모자라면 최소 높이를 지키고 스크롤한다.
+        // 플립7 본화면에서는 이 계산이 예전 고정값 22dp 와 거의 같은 값을 낸다 — 그 값 자체가 한 화면에 맞춰 잡은 것이라서다.
+        val rowHeight = when {
+            !constraints.hasBoundedHeight -> MIN_ROW_HEIGHT
+            else -> ((maxHeight - GRID_TOP_PADDING - GRID_BOTTOM_PADDING) / rows).coerceAtLeast(MIN_ROW_HEIGHT)
+        }
+        val gridHeight = rowHeight * rows
+        val geometry = GridGeometry((gridWidth - AXIS_WIDTH - GRID_END_PADDING) / 7, rowHeight, state.gridStartMin)
         // 끄는 블록과 끌린 거리를 따로 둔다. 거리는 픽셀마다 바뀌므로 그리기 단계(graphicsLayer)와 아래 derivedStateOf
         // 안에서만 읽는다 — 그래야 손가락이 움직일 때마다 모든 블록이 다시 구성되지 않는다.
         var dragging by remember { mutableStateOf<WeekBlock?>(null) }
         var dragOffset by remember { mutableStateOf(Offset.Zero) }
 
         // 가리키는 자리는 30분·한 열 단위로만 바뀐다. derivedStateOf 라 값이 바뀔 때만 읽는 쪽이 다시 구성된다.
-        val target by remember(freeSlots, state.gridStartMin, gridWidth, density) {
+        val target by remember(freeSlots, state.gridStartMin, gridWidth, rowHeight, density) {
             derivedStateOf {
                 dragging?.let { block ->
                     with(density) {
                         val column = (geometry.x(block.dayOfWeek).toPx() + dragOffset.x - AXIS_WIDTH.toPx()) / geometry.columnWidth.toPx()
                         val day = (floor(column + 0.5f).toInt() + 1).coerceIn(1, 7)
-                        val row = ((geometry.y(block.startMin).toPx() + dragOffset.y) / ROW_HEIGHT.toPx()).roundToInt()
+                        val row = ((geometry.y(block.startMin).toPx() + dragOffset.y) / rowHeight.toPx()).roundToInt()
                         val start = state.gridStartMin + row * GRID_MIN
                         val valid = freeSlots[day]?.fits(start, start + block.endMin - block.startMin) == true
                         MoveTarget(block, day, start, valid)
@@ -163,7 +177,13 @@ fun WeekGrid(
         val latestOnMoveStart by rememberUpdatedState(onMoveStart)
         val latestOnMoveEnd by rememberUpdatedState(onMoveEnd)
 
-        Box(Modifier.padding(top = GRID_TOP_PADDING, bottom = 16.dp).fillMaxWidth().height(gridHeight)) {
+        // 스크롤이 패딩·높이보다 앞에 온다. 그래야 스크롤 노드는 창 높이로 남고 그 안의 그리드만 gridHeight 로 자란다.
+        Box(
+            Modifier.verticalScroll(rememberScrollState())
+                .padding(top = GRID_TOP_PADDING, bottom = GRID_BOTTOM_PADDING)
+                .fillMaxWidth()
+                .height(gridHeight),
+        ) {
             GridBackground(state, now, geometry)
 
             if (dragging != null) {

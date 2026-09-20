@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -54,6 +54,7 @@ import com.uj.planner.ui.DAY_NAMES
 import com.uj.planner.ui.components.ScreenHeader
 import com.uj.planner.ui.components.Stepper
 import com.uj.planner.ui.components.outlinedBox
+import com.uj.planner.ui.components.readableWidth
 import com.uj.planner.ui.formatTime
 import com.uj.planner.ui.icons.UjIcons
 import com.uj.planner.ui.theme.PlannerColors
@@ -77,7 +78,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> pendingImport = uri }
 
     Scaffold(topBar = { ScreenHeader("설정", UjIcons.ArrowBack, "뒤로", onBack) }) { padding ->
-        Column(Modifier.padding(padding).fillMaxSize().padding(horizontal = 20.dp)) {
+        Column(Modifier.padding(padding).fillMaxHeight().readableWidth().padding(horizontal = 20.dp)) {
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                 Text("배치 가능 시간대", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
                 Text(

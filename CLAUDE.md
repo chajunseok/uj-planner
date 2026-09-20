@@ -126,6 +126,9 @@ Room DAO (Flow) → Repository → ViewModel (StateFlow) → Composable
 | 테마 | 라이트 단일. 시스템 다크 모드를 따라가지 않는다 |
 | 내보내기·가져오기 | `Backup` 이 DB 파일을 통째로 다룬다. 가져오기는 DB 를 닫고 파일을 바꾼 뒤 **앱을 다시 시작한다** — 열려 있는 Room 인스턴스를 살려 두지 않는다 |
 | 커버 화면 | 네비게이션 스택을 갖지 않는다. `AdaptiveHost` 가 그 위에서 갈라낸다 |
+| 화면 분기 | **기기 이름이 아니라 창의 성질로만 판단한다.** 창 크기와 힌지 방향 둘뿐이고, 판단은 `AdaptiveHost` 한 곳에 있다 |
+| 넓은 화면 | 폼은 `Modifier.readableWidth()` 로 폭을 묶는다. 주간 그리드는 묶지 않는다 — 7열은 넓을수록 좋다 |
+| 주간 그리드 높이 | 행 높이는 고정이 아니라 **남는 높이에서 계산한다.** 모자라면 최소 높이를 지키고 스크롤한다 |
 | 커버·플렉스 | "지금 할 차례" 판정은 `TodayViewModel` 한 곳. 두 화면은 같은 `Focus` 를 글자 크기만 달리해 그린다 |
 
 ## 검증 명령
@@ -167,10 +170,15 @@ find . -name "*.kt" -not -path "*/build/*" | xargs wc -l | awk '$1 > 500 && $2 !
 ./tools/emu.sh open     # 펼침
 ./tools/emu.sh flex     # 반 접기 — 플렉스 모드
 ./tools/emu.sh fold     # 접기
-./tools/emu.sh cover    # 커버 화면 크기(1048x948) 강제
-./tools/emu.sh main     # 화면 크기 복구
 ./tools/emu.sh state    # 현재 상태 확인
+
+# 화면 크기를 덮어써 다른 기기를 흉내 낸다 — 레이아웃 분기 검증용
+./tools/emu.sh size flip7 | cover | phone | tablet | landscape | foldcover | reset
 ```
+
+SDK 경로는 `ANDROID_HOME` 이 없으면 OS 별 기본 위치에서 찾는다. macOS·리눅스·윈도우(Git Bash) 모두 동작한다.
+
+`size` 프리셋은 **창 크기만** 바꾼다. 힌지 상태는 `flex` / `open` 이 따로 건다.
 
 **알려진 한계**: 에뮬레이터 37.1.11 + API 36 arm64 조합에서 접었을 때 커버 디스플레이로 전환되는
 기능이 동작하지 않는다. 스톡 `7.6in Foldable` 프로필에서도 같아서 설정 문제가 아니다.

@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
@@ -55,6 +57,18 @@ val FieldShape = RoundedCornerShape(12.dp)
 
 /** 시안의 칸 테두리: 1dp, 흐린 외곽선. */
 fun Modifier.outlinedBox(shape: Shape = FieldShape): Modifier = clip(shape).border(1.dp, PlannerColors.FaintOutline, shape)
+
+/** 한 줄이 이보다 길어지면 눈이 줄 끝에서 다음 줄 앞을 찾기 어려워진다. */
+private val READABLE_WIDTH = 640.dp
+
+/**
+ * 폼의 폭을 읽기 좋은 만큼으로 묶고 가운데에 놓는다. 태블릿·가로·펼친 폴더블에서 입력칸이
+ * 화면 끝까지 늘어나는 것을 막는다. 폭이 [READABLE_WIDTH] 이하인 화면에서는 `fillMaxWidth` 와 같다.
+ *
+ * 주간 그리드에는 쓰지 않는다. 7열은 넓을수록 좋다.
+ */
+fun Modifier.readableWidth(): Modifier =
+    fillMaxWidth().wrapContentWidth(Alignment.CenterHorizontally).widthIn(max = READABLE_WIDTH).fillMaxWidth()
 
 /** 닫기/뒤로 + 제목. 편집과 설정 화면의 머리. */
 @Composable
