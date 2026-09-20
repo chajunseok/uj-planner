@@ -15,4 +15,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "uj-planner"
-include(":app", ":domain")
+include(":app", ":shared", ":domain")
