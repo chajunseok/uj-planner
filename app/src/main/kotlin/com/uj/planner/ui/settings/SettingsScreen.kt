@@ -58,6 +58,7 @@ import com.uj.planner.ui.components.outlinedBox
 import com.uj.planner.ui.components.readableWidth
 import com.uj.planner.ui.formatTime
 import com.uj.planner.ui.icons.UjIcons
+import com.uj.planner.ui.pad2
 import com.uj.planner.ui.theme.PlannerColors
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.number
@@ -72,10 +73,8 @@ private const val MIDNIGHT = 24 * 60
  */
 private fun exportStamp(): String {
     val today = nowLocalDateTime().date
-    return "${today.year}${today.month.number.pad()}${today.day.pad()}"
+    return "${today.year}${pad2(today.month.number)}${pad2(today.day)}"
 }
-
-private fun Int.pad(): String = toString().padStart(2, '0')
 
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {

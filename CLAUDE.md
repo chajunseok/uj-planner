@@ -100,7 +100,7 @@ uj-planner/
 domain/src/jvmMain/kotlin/com/uj/planner/domain/
 ├── model/        FixedBlock, FlexTaskSpec, Window, Slot, ScheduleResult
 ├── Scheduler.kt  schedule(ScheduleInput) 과 freeSlots(ScheduleInput) — 순수 함수
-└── WeekMath.kt   주 시작일·절단점·남은 횟수 — Repository 가 쓰는 순수 계산
+└── WeekMath.kt   주 시작일·절단점·남은 횟수. 시스템 시계를 읽는 nowLocalDateTime() 도 여기 하나뿐 — 화면과 저장소가 같은 시간대로 "오늘" 을 계산하게
 
 app/src/main/kotlin/com/uj/planner/
 ├── PlannerApp.kt   Application — 의존성 수동 조립

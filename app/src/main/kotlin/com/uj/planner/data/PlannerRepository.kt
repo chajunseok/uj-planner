@@ -247,16 +247,16 @@ class PlannerRepository(
      */
     private suspend fun planWeek(
         weekStart: LocalDate,
-        now: LocalDateTime,
+        at: LocalDateTime,
         tasks: List<FlexTaskEntity>,
         resetPins: (PlacementEntity) -> Boolean,
     ): WeekPlan? {
-        val cutoff = cutoffFor(weekStart, now) ?: return null
+        val cutoff = cutoffFor(weekStart, at) ?: return null
         // 가용 시간에서 고정 일정만 뺀 것. 손으로 옮긴 자리가 아직 유효한지는 여기에 들어가는지로 본다.
         val open = freeSlots(scheduleInput(cutoff, emptyList(), emptyList()))
         val (stale, kept) = placements.getBetween(weekStart, weekEndOf(weekStart)).partition {
             val stillValid = open[it.date.dayOfWeek.isoDayNumber]?.fits(it.startMin, it.endMin) == true
-            it.copy(pinned = it.pinned && stillValid && !resetPins(it)).isReplaceable(now.date, now.minuteOfDay())
+            it.copy(pinned = it.pinned && stillValid && !resetPins(it)).isReplaceable(at.date, at.minuteOfDay())
         }
         val specs = remainingSpecs(tasks.map { it.toSpec() }, kept.fulfilledCounts())
         return WeekPlan(stale.map { it.id }, schedule(scheduleInput(cutoff, specs, kept)))
