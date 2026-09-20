@@ -84,28 +84,45 @@ docs: 배치 규칙 설명 보강
 
 ## 아키텍처
 
-모듈은 둘이고 `app → domain` 단방향이다. 반대 방향 의존은 없다.
+모듈은 셋이고 `app → shared → domain` 단방향이다. 반대 방향 의존은 없다.
 
 ```
 uj-planner/
-├── domain/     Kotlin Multiplatform(지금은 jvm 타깃만). 배치 규칙과 그 입출력 타입만
-└── app/        안드로이드. data(Room) + ui(Compose)
+├── domain/     Kotlin Multiplatform. 배치 규칙과 그 입출력 타입만
+├── shared/     Kotlin Multiplatform + com.android.kotlin.multiplatform.library. data(Room)
+└── app/        안드로이드 껍데기. Application 조립, MainActivity, 런처 아이콘, R8·서명
 ```
+
+**iOS 타깃은 macOS 호스트에서만 선언한다**(`domain`·`shared` 의 `buildIos`). 선언만 해도 네이티브
+commonizer 가 애플 플랫폼 라이브러리를 요구해 다른 OS 의 빌드를 깨뜨릴 수 있어서다.
+`-Puj.ios=true` 로 강제할 수 있다.
+
+**`app` 에 `org.jetbrains.kotlin.multiplatform` 을 적용하지 않는다.** AGP 9 부터
+`com.android.application` 과 공존할 수 없다. 공용 코드가 필요하면 `shared` 로 옮긴다.
 
 **`domain` 에 안드로이드 플러그인을 적용하지 않는다.** 그래서 `import android.*` 가 컴파일 자체가
 안 된다. 이 경계는 규율이 아니라 빌드가 강제한다. 경계를 넓히고 싶어지면 코드를 옮기지 말고
 왜 필요한지부터 따진다.
 
 ```
-domain/src/jvmMain/kotlin/com/uj/planner/domain/
+domain/src/commonMain/kotlin/com/uj/planner/domain/
 ├── model/        FixedBlock, FlexTaskSpec, Window, Slot, ScheduleResult
 ├── Scheduler.kt  schedule(ScheduleInput) 과 freeSlots(ScheduleInput) — 순수 함수
 └── WeekMath.kt   주 시작일·절단점·남은 횟수. 시스템 시계를 읽는 nowLocalDateTime() 도 여기 하나뿐 — 화면과 저장소가 같은 시간대로 "오늘" 을 계산하게
 
+shared/src/commonMain/kotlin/com/uj/planner/data/
+├── entity/ dao/     Room 엔티티와 DAO
+├── Converters.kt    LocalDate ↔ epochDay
+├── PlannerDatabase.kt  @Database + @ConstructedBy. actual 은 KSP 가 타깃별로 생성
+├── DatabaseBuilder.kt  빌더 마감(드라이버·콜백·디스패처). 빌더 생성만 플랫폼별
+└── PlannerRepository.kt
+
+shared/src/androidMain/kotlin/com/uj/planner/data/   Backup(SAF·파일), 안드로이드 빌더
+shared/src/iosMain/kotlin/com/uj/planner/data/       iOS 빌더
+
 app/src/main/kotlin/com/uj/planner/
 ├── PlannerApp.kt   Application — 의존성 수동 조립
-├── data/           entity/ dao/ Converters PlannerDatabase PlannerRepository Backup
-└── ui/             PlannerNavHost, AdaptiveHost + week/ edit/ settings/ missed/ today/ cover/ flex/ components/ theme/
+└── ui/             PlannerNavHost, AdaptiveHost + week/ edit/ settings/ missed/ today/ cover/ flex/ components/ theme/ icons/
 ```
 
 데이터는 한 방향으로만 흐른다.

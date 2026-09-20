@@ -1,0 +1,485 @@
+diff --git a/app/build.gradle.kts b/app/build.gradle.kts
+index fcf54ee..38df33f 100644
+--- a/app/build.gradle.kts
++++ b/app/build.gradle.kts
+@@ -4,7 +4,6 @@ import java.util.Properties
+ plugins {
+     alias(libs.plugins.android.application)
+     alias(libs.plugins.kotlin.compose)
+-    alias(libs.plugins.ksp)
+ }
+ 
+ // 릴리스 서명. 키와 비밀번호는 레포에 두지 않는다 — keystore.properties 는 gitignore 되어 있고 tools/make-release-key.sh 가 만든다.
+@@ -62,7 +61,6 @@ kotlin {
+ 
+ dependencies {
+     implementation(project(":shared"))
+-    implementation(project(":domain"))
+ 
+     implementation(platform(libs.compose.bom))
+     implementation(libs.compose.material3)
+@@ -72,7 +70,4 @@ dependencies {
+     implementation(libs.navigation.compose)
+     implementation(libs.window)
+ 
+-    implementation(libs.room.runtime)
+-    implementation(libs.room.ktx)
+-    ksp(libs.room.compiler)
+ }
+diff --git a/app/src/main/kotlin/com/uj/planner/PlannerApp.kt b/app/src/main/kotlin/com/uj/planner/PlannerApp.kt
+index 9e551f8..aa5ec92 100644
+--- a/app/src/main/kotlin/com/uj/planner/PlannerApp.kt
++++ b/app/src/main/kotlin/com/uj/planner/PlannerApp.kt
+@@ -2,12 +2,12 @@ package com.uj.planner
+ 
+ import android.app.Application
+ import com.uj.planner.data.Backup
+-import com.uj.planner.data.PlannerDatabase
++import com.uj.planner.data.createPlannerDatabase
+ import com.uj.planner.data.PlannerRepository
+ 
+ /** DI 프레임워크 없이 여기서 직접 조립한다. 화면은 이 객체에서 의존성을 꺼내 생성자로 넘긴다. */
+ class PlannerApp : Application() {
+-    private val database by lazy { PlannerDatabase.create(this) }
++    private val database by lazy { createPlannerDatabase(this) }
+     val repository: PlannerRepository by lazy { PlannerRepository(database) }
+     val backup: Backup by lazy { Backup(this, database) }
+ }
+diff --git a/shared/build.gradle.kts b/shared/build.gradle.kts
+index 2cca8c8..931ece6 100644
+--- a/shared/build.gradle.kts
++++ b/shared/build.gradle.kts
+@@ -5,6 +5,7 @@ plugins {
+     alias(libs.plugins.android.kmp.library)
+     alias(libs.plugins.kotlin.compose)
+     alias(libs.plugins.compose.multiplatform)
++    alias(libs.plugins.ksp)
+ }
+ 
+ // domain 과 같은 규칙. macOS 호스트에서만 iOS 타깃을 선언한다.
+@@ -43,6 +44,24 @@ kotlin {
+             implementation(compose.foundation)
+             implementation(compose.material3)
+             implementation(compose.ui)
++
++            implementation(libs.room.runtime)
++            implementation(libs.sqlite.bundled)
++            implementation(libs.kotlinx.coroutines.core)
+         }
+     }
+ }
++
++// Room 컴파일러는 타깃별 configuration 에 건다. common 메타데이터 한 번으로는 안 된다 —
++// 생성물이 플랫폼별 actual(RoomDatabaseConstructor 의 actual 과 DAO 의 _Impl)이기 때문이다.
++//
++// 설정 이름은 kspAndroid 다 — kspAndroidMain 은 **태스크** 이름이라 헷갈리기 쉽다.
++// `./gradlew :shared:dependencies | grep ^ksp` 가 "KSP dependencies for the ... source set" 이라고 알려 준다.
++dependencies {
++    add("kspAndroid", libs.room.compiler)
++    if (buildIos) {
++        add("kspIosX64", libs.room.compiler)
++        add("kspIosArm64", libs.room.compiler)
++        add("kspIosSimulatorArm64", libs.room.compiler)
++    }
++}
+diff --git a/app/src/main/kotlin/com/uj/planner/data/Backup.kt b/shared/src/androidMain/kotlin/com/uj/planner/data/Backup.kt
+similarity index 82%
+rename from app/src/main/kotlin/com/uj/planner/data/Backup.kt
+rename to shared/src/androidMain/kotlin/com/uj/planner/data/Backup.kt
+index 1696f33..ba85ad0 100644
+--- a/app/src/main/kotlin/com/uj/planner/data/Backup.kt
++++ b/shared/src/androidMain/kotlin/com/uj/planner/data/Backup.kt
+@@ -5,6 +5,9 @@ import android.database.sqlite.SQLiteDatabase
+ import android.database.sqlite.SQLiteException
+ import android.net.Uri
+ import android.provider.DocumentsContract
++import androidx.room.useReaderConnection
++import androidx.room.useWriterConnection
++import androidx.room.execSQL
+ import java.io.File
+ import java.io.IOException
+ import java.io.InputStream
+@@ -26,7 +29,7 @@ class Backup(private val context: Context, private val database: PlannerDatabase
+         snapshot.delete()
+         try {
+             // 파일을 그냥 복사하면 WAL 에 남은 쓰기가 빠진다. VACUUM INTO 는 그 순간의 일관된 사본을 한 파일로 만든다.
+-            database.openHelper.writableDatabase.execSQL("VACUUM INTO '${snapshot.absolutePath.replace("'", "''")}'")
++            database.useWriterConnection { it.execSQL("VACUUM INTO '${snapshot.absolutePath.replace("'", "''")}'") }
+             val out = context.contentResolver.openOutputStream(target, "wt") ?: throw IOException("파일을 열지 못했어요")
+             out.use { snapshot.inputStream().use { input -> input.copyTo(it) } }
+         } catch (e: Exception) {
+@@ -58,7 +61,9 @@ class Backup(private val context: Context, private val database: PlannerDatabase
+             } catch (e: SecurityException) {
+                 throw BackupException("파일을 읽을 권한이 없어요. 파일을 다시 골라 주세요")
+             }
+-            verify(incoming)
++            // DB 를 닫기 전에 현재 스키마를 읽어 둔다.
++            val (currentVersion, currentHash) = currentSchema()
++            verify(incoming, currentVersion, currentHash)
+             database.close()
+             File(dbFile.path + "-wal").delete()
+             File(dbFile.path + "-shm").delete()
+@@ -82,20 +87,25 @@ class Backup(private val context: Context, private val database: PlannerDatabase
+         }
+     }
+ 
++    /** 지금 DB 의 (버전, 구조 지문). Room 의 드라이버 연결로 읽는다. */
++    private suspend fun currentSchema(): Pair<Int, String?> = database.useReaderConnection { connection ->
++        val version = connection.usePrepared("PRAGMA user_version") { if (it.step()) it.getLong(0).toInt() else 0 }
++        val hash = connection.usePrepared(IDENTITY_HASH) { if (it.step()) it.getText(0) else null }
++        version to hash
++    }
++
+     // 구조만 본다. 앱의 내보내기가 아니라 파일 관리자로 planner.db 본체만 복사한 파일도 통과하는데, 그런 파일은 최근 쓰기가 빠져 있을 수 있다.
+     // ponytail: 지금은 DB 버전이 하나뿐이라 버전과 구조가 지금과 똑같은 파일만 받는다.
+     // 버전 2 와 마이그레이션이 생기면 옛 버전 파일도 받아서 Room 이 다음 실행 때 올리도록 푼다.
+-    private fun verify(file: File) {
++    private fun verify(file: File, currentVersion: Int, currentHash: String?) {
+         val header = ByteArray(SQLITE_HEADER.size)
+         file.inputStream().use { it.read(header) }
+         if (!header.contentEquals(SQLITE_HEADER)) throw BackupException(NOT_OURS)
+         try {
+             SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
+                 if (db.single("PRAGMA quick_check") != "ok") throw BackupException("파일이 손상됐어요")
+-                val current = database.openHelper.readableDatabase
+-                if (db.version > current.version) throw BackupException("더 새 버전의 앱에서 내보낸 파일이에요. 앱을 먼저 업데이트해 주세요")
+-                val currentHash = current.query(IDENTITY_HASH).use { if (it.moveToFirst()) it.getString(0) else null }
+-                if (db.version != current.version || currentHash == null || db.single(IDENTITY_HASH) != currentHash) throw BackupException(NOT_OURS)
++                if (db.version > currentVersion) throw BackupException("더 새 버전의 앱에서 내보낸 파일이에요. 앱을 먼저 업데이트해 주세요")
++                if (db.version != currentVersion || currentHash == null || db.single(IDENTITY_HASH) != currentHash) throw BackupException(NOT_OURS)
+             }
+         } catch (e: SQLiteException) {
+             throw BackupException(NOT_OURS)
+diff --git a/shared/src/androidMain/kotlin/com/uj/planner/data/DatabaseBuilder.android.kt b/shared/src/androidMain/kotlin/com/uj/planner/data/DatabaseBuilder.android.kt
+new file mode 100644
+index 0000000..41501b0
+--- /dev/null
++++ b/shared/src/androidMain/kotlin/com/uj/planner/data/DatabaseBuilder.android.kt
+@@ -0,0 +1,25 @@
++package com.uj.planner.data
++
++import android.content.Context
++import androidx.room.Room
++import androidx.room.RoomDatabase
++
++/**
++ * 안드로이드의 DB 파일 자리. 경로가 지금까지와 같아 기존 파일을 그대로 연다.
++ *
++ * 팩토리를 명시해서 넘긴다. 빼면 Room 이 리플렉션으로 PlannerDatabase_Impl 을 찾으려 하는데,
++ * @ConstructedBy 를 쓰는 순간 그 경로가 아니라 KSP 가 만든 생성자 객체를 써야 한다.
++ */
++private fun plannerDatabaseBuilder(context: Context): RoomDatabase.Builder<PlannerDatabase> =
++    Room.databaseBuilder(
++        context = context,
++        name = context.getDatabasePath(PlannerDatabase.FILE_NAME).absolutePath,
++        factory = { PlannerDatabaseConstructor.initialize() },
++    )
++
++/**
++ * 안드로이드에서 DB 를 연다.
++ *
++ * 빌더 타입을 밖으로 내보내지 않는다. 그래야 :app 이 Room 을 직접 의존하지 않아도 된다.
++ */
++fun createPlannerDatabase(context: Context): PlannerDatabase = createPlannerDatabase(plannerDatabaseBuilder(context))
+diff --git a/app/src/main/kotlin/com/uj/planner/data/Converters.kt b/shared/src/commonMain/kotlin/com/uj/planner/data/Converters.kt
+similarity index 100%
+rename from app/src/main/kotlin/com/uj/planner/data/Converters.kt
+rename to shared/src/commonMain/kotlin/com/uj/planner/data/Converters.kt
+diff --git a/shared/src/commonMain/kotlin/com/uj/planner/data/DatabaseBuilder.kt b/shared/src/commonMain/kotlin/com/uj/planner/data/DatabaseBuilder.kt
+new file mode 100644
+index 0000000..916962d
+--- /dev/null
++++ b/shared/src/commonMain/kotlin/com/uj/planner/data/DatabaseBuilder.kt
+@@ -0,0 +1,18 @@
++package com.uj.planner.data
++
++import androidx.room.RoomDatabase
++import androidx.sqlite.driver.bundled.BundledSQLiteDriver
++import kotlinx.coroutines.Dispatchers
++
++/**
++ * 빌더 마감. 드라이버·콜백·디스패처는 플랫폼이 달라도 같다.
++ *
++ * 빌더를 **만드는** 일만 플랫폼별이다 — 안드로이드는 Context 가 있어야 파일 경로를 알고,
++ * iOS 는 문서 디렉터리를 시스템에 물어본다. expect/actual 을 두지 않고 부르는 쪽에서 넘긴다.
++ */
++fun createPlannerDatabase(builder: RoomDatabase.Builder<PlannerDatabase>): PlannerDatabase =
++    builder
++        .addCallback(SeedDefaultAvailability)
++        .setDriver(BundledSQLiteDriver())
++        .setQueryCoroutineContext(Dispatchers.IO)
++        .build()
+diff --git a/app/src/main/kotlin/com/uj/planner/data/PlannerDatabase.kt b/shared/src/commonMain/kotlin/com/uj/planner/data/PlannerDatabase.kt
+similarity index 58%
+rename from app/src/main/kotlin/com/uj/planner/data/PlannerDatabase.kt
+rename to shared/src/commonMain/kotlin/com/uj/planner/data/PlannerDatabase.kt
+index e322646..c8874c6 100644
+--- a/app/src/main/kotlin/com/uj/planner/data/PlannerDatabase.kt
++++ b/shared/src/commonMain/kotlin/com/uj/planner/data/PlannerDatabase.kt
+@@ -1,11 +1,12 @@
+ package com.uj.planner.data
+ 
+-import android.content.Context
++import androidx.room.ConstructedBy
+ import androidx.room.Database
+-import androidx.room.Room
+ import androidx.room.RoomDatabase
++import androidx.room.RoomDatabaseConstructor
+ import androidx.room.TypeConverters
+-import androidx.sqlite.db.SupportSQLiteDatabase
++import androidx.sqlite.SQLiteConnection
++import androidx.sqlite.execSQL
+ import com.uj.planner.data.dao.AvailabilityDao
+ import com.uj.planner.data.dao.FixedEventDao
+ import com.uj.planner.data.dao.FlexTaskDao
+@@ -22,6 +23,7 @@ import com.uj.planner.data.entity.PlacementEntity
+     version = 1,
+     exportSchema = false,
+ )
++@ConstructedBy(PlannerDatabaseConstructor::class)
+ @TypeConverters(Converters::class)
+ abstract class PlannerDatabase : RoomDatabase() {
+     abstract fun fixedEvents(): FixedEventDao
+@@ -31,20 +33,26 @@ abstract class PlannerDatabase : RoomDatabase() {
+ 
+     companion object {
+         const val FILE_NAME = "planner.db"
+-
+-        fun create(context: Context): PlannerDatabase =
+-            Room.databaseBuilder(context, PlannerDatabase::class.java, FILE_NAME)
+-                .addCallback(SeedDefaultAvailability)
+-                .build()
+     }
+ }
+ 
++/**
++ * 인스턴스를 만드는 자리. **본문을 우리가 쓰지 않는다** — KSP 가 타깃마다 actual 을 생성한다.
++ * 리플렉션(`::class.java`)이 사라진 덕에 R8 keep 규칙도 필요 없어진다.
++ */
++@Suppress("NO_ACTUAL_FOR_EXPECT", "KotlinNoActualForExpect")
++expect object PlannerDatabaseConstructor : RoomDatabaseConstructor<PlannerDatabase> {
++    override fun initialize(): PlannerDatabase
++}
++
+ /** DB 를 처음 만들 때 기본 가용 시간을 넣는다. 평일 08:00~24:00, 주말 10:00~25:00. */
+-private object SeedDefaultAvailability : RoomDatabase.Callback() {
+-    override fun onCreate(db: SupportSQLiteDatabase) {
++internal object SeedDefaultAvailability : RoomDatabase.Callback() {
++    // KMP 의 Callback 은 바인드 인자를 받는 execSQL 오버로드가 없다. 값이 전부 우리가 만든
++    // Int 라 문자열에 그대로 넣어도 주입될 여지가 없다.
++    override fun onCreate(connection: SQLiteConnection) {
+         for (day in 1..7) {
+             val (start, end) = if (day <= 5) 8 * 60 to 24 * 60 else 10 * 60 to 25 * 60
+-            db.execSQL("INSERT INTO day_availability (dayOfWeek, startMin, endMin) VALUES (?, ?, ?)", arrayOf(day, start, end))
++            connection.execSQL("INSERT INTO day_availability (dayOfWeek, startMin, endMin) VALUES ($day, $start, $end)")
+         }
+     }
+ }
+diff --git a/app/src/main/kotlin/com/uj/planner/data/PlannerRepository.kt b/shared/src/commonMain/kotlin/com/uj/planner/data/PlannerRepository.kt
+similarity index 93%
+rename from app/src/main/kotlin/com/uj/planner/data/PlannerRepository.kt
+rename to shared/src/commonMain/kotlin/com/uj/planner/data/PlannerRepository.kt
+index e8012c4..ad67718 100644
+--- a/app/src/main/kotlin/com/uj/planner/data/PlannerRepository.kt
++++ b/shared/src/commonMain/kotlin/com/uj/planner/data/PlannerRepository.kt
+@@ -1,6 +1,7 @@
+ package com.uj.planner.data
+ 
+-import androidx.room.withTransaction
++import androidx.room.Transactor.SQLiteTransactionType
++import androidx.room.useWriterConnection
+ import com.uj.planner.data.entity.DayAvailabilityEntity
+ import com.uj.planner.data.entity.FixedEventEntity
+ import com.uj.planner.data.entity.FlexTaskEntity
+@@ -53,6 +54,15 @@ class PlannerRepository(
+     private val placements = db.placements()
+     private val availability = db.availability()
+ 
++    /**
++     * 쓰기 트랜잭션 하나.
++     *
++     * room-ktx 의 `withTransaction` 은 aar 로만 나와 공용 코드에서 쓸 수 없다. 플랫폼에 따라
++     * 달라지는 세부는 이 함수 하나에 가두고, 부르는 쪽 아홉 군데는 모양을 그대로 둔다.
++     */
++    private suspend fun <T> tx(block: suspend () -> T): T =
++        db.useWriterConnection { it.withTransaction(SQLiteTransactionType.IMMEDIATE) { block() } }
++
+     fun currentWeekStart(): LocalDate = weekStartOf(now().date)
+ 
+     fun observeFixedEvents(): Flow<List<FixedEventEntity>> = fixedEvents.observeAll()
+@@ -127,7 +137,7 @@ class PlannerRepository(
+      *
+      * @throws IllegalArgumentException 값이 도메인 불변식을 어길 때.
+      */
+-    suspend fun previewFlexTask(task: FlexTaskEntity): List<PlannedSlot> = db.withTransaction {
++    suspend fun previewFlexTask(task: FlexTaskEntity): List<PlannedSlot> = tx {
+         val tasks = flexTasks.getAll().filter { it.id != task.id } + task
+         val plan = planWeek(currentWeekStart(), now(), tasks) { it.flexTaskId == task.id }
+         plan?.result?.planned.orEmpty().filter { it.taskId == task.id }
+@@ -144,32 +154,32 @@ class PlannerRepository(
+     suspend fun recomputeWeek(
+         weekStart: LocalDate = currentWeekStart(),
+         resetPins: Boolean = false,
+-    ): List<Unplaced> = db.withTransaction {
++    ): List<Unplaced> = tx {
+         val plan = planWeek(weekStart, now(), flexTasks.getAll()) { resetPins }
+-            ?: return@withTransaction emptyList()
++            ?: return@tx emptyList()
+         placements.deleteByIds(plan.stale)
+         placements.insertAll(plan.result.planned.map { PlacementEntity.from(it, weekStart) })
+         plan.result.unplaced
+     }
+ 
+     /** 아직 한 번도 짜지 않은 주를 처음 볼 때 짠다. 새 주에 들어섰을 때와 다음 주를 미리 볼 때 쓴다. */
+-    suspend fun ensureWeekPlanned(weekStart: LocalDate) = db.withTransaction {
++    suspend fun ensureWeekPlanned(weekStart: LocalDate) = tx {
+         if (placements.getBetween(weekStart, weekEndOf(weekStart)).isEmpty()) recomputeWeek(weekStart)
+     }
+ 
+     /** 배치 [placementId] 를 옮길 수 있는 요일별 빈칸. 옮길 수 없는 배치면 빈 맵. */
+     suspend fun freeSlotsForMove(placementId: Long): Map<Int, List<Slot>> =
+-        db.withTransaction { moveContext(placementId)?.second.orEmpty() }
++        tx { moveContext(placementId)?.second.orEmpty() }
+ 
+     /**
+      * 사용자가 블록을 손으로 옮긴다. 옮긴 자리는 고정되어 이후 재계산에서도 유지된다.
+      *
+      * @return 그 자리가 비어 있지 않아 옮기지 못했으면 false.
+      */
+-    suspend fun movePlacement(placementId: Long, dayOfWeek: Int, startMin: Int): Boolean = db.withTransaction {
+-        val (placement, free) = moveContext(placementId) ?: return@withTransaction false
++    suspend fun movePlacement(placementId: Long, dayOfWeek: Int, startMin: Int): Boolean = tx {
++        val (placement, free) = moveContext(placementId) ?: return@tx false
+         val endMin = startMin + placement.endMin - placement.startMin
+-        if (free[dayOfWeek]?.fits(startMin, endMin) != true) return@withTransaction false
++        if (free[dayOfWeek]?.fits(startMin, endMin) != true) return@tx false
+         val date = weekStartOf(placement.date).plus(dayOfWeek - 1L, DateTimeUnit.DAY)
+         placements.update(placement.copy(date = date, startMin = startMin, endMin = endMin, pinned = true))
+         true
+@@ -182,7 +192,7 @@ class PlannerRepository(
+      *
+      * @param decisions 배치 id → [PlacementStatus.DONE]·[PlacementStatus.MISSED]·[PlacementStatus.DROPPED] 중 하나.
+      */
+-    suspend fun resolveMissed(decisions: Map<Long, PlacementStatus>): ResolveResult = db.withTransaction {
++    suspend fun resolveMissed(decisions: Map<Long, PlacementStatus>): ResolveResult = tx {
+         require(PlacementStatus.PLANNED !in decisions.values) { "PLANNED 는 밀린 일정에 대한 답이 아니다" }
+         // 아직 답을 받지 않은 배치에만 적용한다. 같은 답이 두 번 들어와도 재배치가 두 번 생기지 않고,
+         // 이미 완료·버림으로 확정된 배치를 덮어쓰지도 않는다.
+@@ -196,7 +206,7 @@ class PlannerRepository(
+             .filter { decisions[it.id] == PlacementStatus.MISSED && it.date >= weekStart }
+             .groupingBy { it.flexTaskId }
+             .eachCount()
+-        if (missedCounts.isEmpty()) return@withTransaction ResolveResult()
++        if (missedCounts.isEmpty()) return@tx ResolveResult()
+ 
+         val cutoff = checkNotNull(cutoffFor(weekStart, at)) { "이번 주에는 항상 절단점이 있다" }
+         val specs = flexTasks.getAll().filter { it.id in missedCounts }.map { it.toSpec(times = missedCounts.getValue(it.id)) }
+@@ -212,24 +222,24 @@ class PlannerRepository(
+      * @return 무를 수 없는 상태라 아무것도 바꾸지 않았으면 false. 새로 잡힌 자리가 그 사이 재계산으로 바뀌었거나
+      *   이미 답을 받았다면, 되돌릴 때 그 자리가 남아 주당 횟수를 넘기게 된다.
+      */
+-    suspend fun undoResolve(placementId: Long, movedIds: List<Long>): Boolean = db.withTransaction {
++    suspend fun undoResolve(placementId: Long, movedIds: List<Long>): Boolean = tx {
+         val answered = placements.getByIds(listOf(placementId)).singleOrNull()
+         val moved = placements.getByIds(movedIds)
+         val intact = moved.size == movedIds.size && moved.all { it.status == PlacementStatus.PLANNED }
+-        if (answered == null || answered.status == PlacementStatus.PLANNED || !intact) return@withTransaction false
++        if (answered == null || answered.status == PlacementStatus.PLANNED || !intact) return@tx false
+         placements.deleteByIds(movedIds)
+         placements.setStatus(placementId, PlacementStatus.PLANNED)
+         true
+     }
+ 
+     /** `못함` 으로 답했지만 다시 넣을 빈칸이 없던 배치를 이번 주에서 포기한다. 포기한 횟수는 채운 것으로 쳐서 다시 배치하지 않는다. */
+-    suspend fun dropMissed(placementId: Long) = db.withTransaction {
++    suspend fun dropMissed(placementId: Long) = tx {
+         val placement = placements.getByIds(listOf(placementId)).singleOrNull()
+         if (placement?.status == PlacementStatus.MISSED) placements.setStatus(placementId, PlacementStatus.DROPPED)
+     }
+ 
+     private suspend fun writeThenRecompute(write: suspend () -> Unit) {
+-        db.withTransaction {
++        tx {
+             write()
+             // 아직 오지 않은 주는 옛 조건으로 짜여 있다. 지워 두면 볼 때 새 조건으로 다시 짠다.
+             placements.deletePlannedAfter(weekEndOf(currentWeekStart()))
+diff --git a/app/src/main/kotlin/com/uj/planner/data/dao/AvailabilityDao.kt b/shared/src/commonMain/kotlin/com/uj/planner/data/dao/AvailabilityDao.kt
+similarity index 100%
+rename from app/src/main/kotlin/com/uj/planner/data/dao/AvailabilityDao.kt
+rename to shared/src/commonMain/kotlin/com/uj/planner/data/dao/AvailabilityDao.kt
+diff --git a/app/src/main/kotlin/com/uj/planner/data/dao/FixedEventDao.kt b/shared/src/commonMain/kotlin/com/uj/planner/data/dao/FixedEventDao.kt
+similarity index 100%
+rename from app/src/main/kotlin/com/uj/planner/data/dao/FixedEventDao.kt
+rename to shared/src/commonMain/kotlin/com/uj/planner/data/dao/FixedEventDao.kt
+diff --git a/app/src/main/kotlin/com/uj/planner/data/dao/FlexTaskDao.kt b/shared/src/commonMain/kotlin/com/uj/planner/data/dao/FlexTaskDao.kt
+similarity index 100%
+rename from app/src/main/kotlin/com/uj/planner/data/dao/FlexTaskDao.kt
+rename to shared/src/commonMain/kotlin/com/uj/planner/data/dao/FlexTaskDao.kt
+diff --git a/app/src/main/kotlin/com/uj/planner/data/dao/PlacementDao.kt b/shared/src/commonMain/kotlin/com/uj/planner/data/dao/PlacementDao.kt
+similarity index 100%
+rename from app/src/main/kotlin/com/uj/planner/data/dao/PlacementDao.kt
+rename to shared/src/commonMain/kotlin/com/uj/planner/data/dao/PlacementDao.kt
+diff --git a/app/src/main/kotlin/com/uj/planner/data/entity/DayAvailabilityEntity.kt b/shared/src/commonMain/kotlin/com/uj/planner/data/entity/DayAvailabilityEntity.kt
+similarity index 100%
+rename from app/src/main/kotlin/com/uj/planner/data/entity/DayAvailabilityEntity.kt
+rename to shared/src/commonMain/kotlin/com/uj/planner/data/entity/DayAvailabilityEntity.kt
+diff --git a/app/src/main/kotlin/com/uj/planner/data/entity/FixedEventEntity.kt b/shared/src/commonMain/kotlin/com/uj/planner/data/entity/FixedEventEntity.kt
+similarity index 100%
+rename from app/src/main/kotlin/com/uj/planner/data/entity/FixedEventEntity.kt
+rename to shared/src/commonMain/kotlin/com/uj/planner/data/entity/FixedEventEntity.kt
+diff --git a/app/src/main/kotlin/com/uj/planner/data/entity/FlexTaskEntity.kt b/shared/src/commonMain/kotlin/com/uj/planner/data/entity/FlexTaskEntity.kt
+similarity index 100%
+rename from app/src/main/kotlin/com/uj/planner/data/entity/FlexTaskEntity.kt
+rename to shared/src/commonMain/kotlin/com/uj/planner/data/entity/FlexTaskEntity.kt
+diff --git a/app/src/main/kotlin/com/uj/planner/data/entity/PlacementEntity.kt b/shared/src/commonMain/kotlin/com/uj/planner/data/entity/PlacementEntity.kt
+similarity index 100%
+rename from app/src/main/kotlin/com/uj/planner/data/entity/PlacementEntity.kt
+rename to shared/src/commonMain/kotlin/com/uj/planner/data/entity/PlacementEntity.kt
+diff --git a/app/src/main/kotlin/com/uj/planner/data/entity/PlacementStatus.kt b/shared/src/commonMain/kotlin/com/uj/planner/data/entity/PlacementStatus.kt
+similarity index 100%
+rename from app/src/main/kotlin/com/uj/planner/data/entity/PlacementStatus.kt
+rename to shared/src/commonMain/kotlin/com/uj/planner/data/entity/PlacementStatus.kt
+diff --git a/shared/src/commonMain/kotlin/com/uj/planner/shared/Placeholder.kt b/shared/src/commonMain/kotlin/com/uj/planner/shared/Placeholder.kt
+deleted file mode 100644
+index 8d26500..0000000
+--- a/shared/src/commonMain/kotlin/com/uj/planner/shared/Placeholder.kt
++++ /dev/null
+@@ -1,9 +0,0 @@
+-package com.uj.planner.shared
+-
+-/**
+- * 빈 모듈이 아님을 알리는 표식. 다음 단계에서 data·ui 가 들어오면 지운다.
+- *
+- * 이 파일이 있는 이유는 하나. 이 커밋의 목적이 "코드 이식" 이 아니라 "플러그인 조합이
+- * 성립하는가" 하나이기 때문이다. 둘을 한 커밋에 섞으면 실패했을 때 어느 쪽 문제인지 모른다.
+- */
+-internal const val SHARED_MODULE_MARKER = "uj-planner-shared"
+diff --git a/shared/src/iosMain/kotlin/com/uj/planner/data/DatabaseBuilder.ios.kt b/shared/src/iosMain/kotlin/com/uj/planner/data/DatabaseBuilder.ios.kt
+new file mode 100644
+index 0000000..4804260
+--- /dev/null
++++ b/shared/src/iosMain/kotlin/com/uj/planner/data/DatabaseBuilder.ios.kt
+@@ -0,0 +1,23 @@
++package com.uj.planner.data
++
++import androidx.room.Room
++import androidx.room.RoomDatabase
++import platform.Foundation.NSDocumentDirectory
++import platform.Foundation.NSFileManager
++import platform.Foundation.NSUserDomainMask
++
++/** iOS 의 DB 파일 자리. 문서 디렉터리에 둔다 — 백업 대상이고 앱을 지우면 같이 사라진다. */
++fun plannerDatabaseBuilder(): RoomDatabase.Builder<PlannerDatabase> {
++    val documents = NSFileManager.defaultManager.URLForDirectory(
++        directory = NSDocumentDirectory,
++        inDomain = NSUserDomainMask,
++        appropriateForURL = null,
++        create = false,
++        error = null,
++    )
++    val path = requireNotNull(documents?.path) { "문서 디렉터리를 찾지 못함" }
++    return Room.databaseBuilder(
++        name = "$path/${PlannerDatabase.FILE_NAME}",
++        factory = { PlannerDatabaseConstructor.initialize() },
++    )
++}
