@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import com.uj.planner.data.Backup
 import com.uj.planner.domain.nowLocalDateTime
 import com.uj.planner.ui.icons.UjIcons
+import com.uj.planner.ui.pad2
 import com.uj.planner.ui.settings.PillButton
 import com.uj.planner.ui.settings.SettingsViewModel
 import com.uj.planner.ui.theme.PlannerColors

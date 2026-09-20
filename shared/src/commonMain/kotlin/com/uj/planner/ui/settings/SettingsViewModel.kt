@@ -88,9 +88,11 @@ class SettingsViewModel(private val repository: PlannerRepository) : ViewModel()
     }
 
     /**
-     * 지금 데이터를 파일의 내용으로 바꾼다. 받아들일 수 없는 파일이면 [BackupException] 의 이유만
-     * 알리고 아무것도 바꾸지 않는다. 그 밖에는 성공이든 실패든 DB 가 닫혔을 수 있어서
-     * [restart] 로 앱을 다시 시작한다.
+     * 지금 데이터를 파일의 내용으로 바꾼다.
+     *
+     * [read] 가 던지는 예외 중 [BackupException] 만 "아무것도 바뀌지 않은 실패" 로 보고 이유를
+     * 알린다. 나머지는 전부 DB 가 이미 닫혔을 수 있다고 보고 [restart] 로 넘긴다 — 플랫폼이
+     * 무엇을 던지든 이 규칙은 같다.
      */
     fun importWith(read: suspend () -> Unit, restart: () -> Unit) {
         // 가져오기는 DB 를 닫는다. 가용 시간 저장이 도는 중이면 그 저장이 깨진다.
