@@ -48,12 +48,16 @@ import com.uj.planner.domain.fits
 import com.uj.planner.domain.minuteOfDay
 import com.uj.planner.domain.model.Slot
 import com.uj.planner.ui.DAY_NAMES
+import com.uj.planner.ui.pad2
 import com.uj.planner.ui.theme.AxisStyle
 import com.uj.planner.ui.theme.PlannerColors
-import java.time.LocalDate
-import java.time.LocalDateTime
 import kotlin.math.floor
 import kotlin.math.roundToInt
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.isoDayNumber
+import kotlinx.datetime.plus
 
 /**
  * 30분 한 행의 **최소** 높이. 실제 높이는 남는 높이에 맞춰 늘어난다 — [WeekGrid] 참고.
@@ -85,7 +89,7 @@ fun DayHeader(weekStart: LocalDate, today: LocalDate, modifier: Modifier = Modif
     Row(modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         Spacer(Modifier.width(AXIS_WIDTH))
         DAY_NAMES.forEachIndexed { i, name ->
-            val date = weekStart.plusDays(i.toLong())
+            val date = weekStart.plus(i, DateTimeUnit.DAY)
             val isToday = date == today
             val labelColor = when {
                 isToday -> MaterialTheme.colorScheme.primary
@@ -105,7 +109,7 @@ fun DayHeader(weekStart: LocalDate, today: LocalDate, modifier: Modifier = Modif
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        date.dayOfMonth.toString(),
+                        date.day.toString(),
                         style = MaterialTheme.typography.labelMedium,
                         color = if (isToday) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                     )
@@ -209,11 +213,11 @@ fun WeekGrid(
                 }
             }
 
-            val today = now.toLocalDate()
+            val today = now.date
             val nowMin = now.minuteOfDay()
             state.blocks.forEach { block ->
                 val isDragged = dragging?.key == block.key
-                val date = state.weekStart.plusDays(block.dayOfWeek - 1L)
+                val date = state.weekStart.plus(block.dayOfWeek - 1L, DateTimeUnit.DAY)
                 val inProgress = block.status == PlacementStatus.PLANNED && date == today && nowMin in block.startMin until block.endMin
                 val movable = block.status == PlacementStatus.PLANNED && !state.isPast
                 val cell = Modifier.offset(geometry.x(block.dayOfWeek), geometry.y(block.startMin))
@@ -285,7 +289,7 @@ fun WeekGrid(
 @Composable
 private fun GridBackground(state: WeekUiState, now: LocalDateTime, geometry: GridGeometry) {
     val scheme = MaterialTheme.colorScheme
-    val todayColumn = now.dayOfWeek.value.takeIf { state.isThisWeek }
+    val todayColumn = now.dayOfWeek.isoDayNumber.takeIf { state.isThisWeek }
 
     if (todayColumn != null) {
         Box(
@@ -301,7 +305,7 @@ private fun GridBackground(state: WeekUiState, now: LocalDateTime, geometry: Gri
         )
         if (min < state.gridEndMin) {
             Text(
-                "%02d".format(min / 60 % 24),
+                pad2(min / 60 % 24),
                 style = AxisStyle,
                 color = PlannerColors.Faint,
                 textAlign = TextAlign.End,
@@ -316,7 +320,7 @@ private fun GridBackground(state: WeekUiState, now: LocalDateTime, geometry: Gri
 private fun NowLine(state: WeekUiState, now: LocalDateTime, geometry: GridGeometry) {
     val nowMin = now.minuteOfDay()
     if (!state.isThisWeek || nowMin !in state.gridStartMin..state.gridEndMin) return
-    val x = geometry.x(now.dayOfWeek.value)
+    val x = geometry.x(now.dayOfWeek.isoDayNumber)
     val color = MaterialTheme.colorScheme.error
     Box(Modifier.offset(x, geometry.y(nowMin) - 1.dp).size(geometry.columnWidth, 2.dp).background(color))
     Box(Modifier.offset(x - 4.dp, geometry.y(nowMin) - 4.dp).size(8.dp).background(color, CircleShape))

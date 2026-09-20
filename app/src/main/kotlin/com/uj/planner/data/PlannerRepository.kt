@@ -17,15 +17,18 @@ import com.uj.planner.domain.model.ScheduleInput
 import com.uj.planner.domain.model.ScheduleResult
 import com.uj.planner.domain.model.Slot
 import com.uj.planner.domain.model.Unplaced
+import com.uj.planner.domain.nowLocalDateTime
 import com.uj.planner.domain.remainingSpecs
 import com.uj.planner.domain.schedule
 import com.uj.planner.domain.weekEndOf
 import com.uj.planner.domain.weekStartOf
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import java.time.Clock
-import java.time.LocalDate
-import java.time.LocalDateTime
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.isoDayNumber
+import kotlinx.datetime.plus
 
 /**
  * 밀린 일정을 처리한 결과. [moved] 는 새로 잡힌 자리, [unplaced] 는 빈칸이 없어 못 옮긴 일정이다.
@@ -43,14 +46,14 @@ data class ResolveResult(
  */
 class PlannerRepository(
     private val db: PlannerDatabase,
-    private val clock: Clock = Clock.systemDefaultZone(),
+    private val now: () -> LocalDateTime = ::nowLocalDateTime,
 ) {
     private val fixedEvents = db.fixedEvents()
     private val flexTasks = db.flexTasks()
     private val placements = db.placements()
     private val availability = db.availability()
 
-    fun currentWeekStart(): LocalDate = weekStartOf(LocalDate.now(clock))
+    fun currentWeekStart(): LocalDate = weekStartOf(now().date)
 
     fun observeFixedEvents(): Flow<List<FixedEventEntity>> = fixedEvents.observeAll()
 
@@ -69,8 +72,8 @@ class PlannerRepository(
 
     /** 끝났는데 아직 했음·못함·버림을 확인받지 못한 배치. */
     suspend fun overdue(): List<PlacementEntity> {
-        val now = LocalDateTime.now(clock)
-        return placements.getOverdue(now.toLocalDate(), now.minuteOfDay())
+        val at = now()
+        return placements.getOverdue(at.date, at.minuteOfDay())
     }
 
     // 아래 쓰기는 배치 조건을 바꾸므로 같은 트랜잭션 안에서 이번 주를 다시 짠다.
@@ -126,7 +129,7 @@ class PlannerRepository(
      */
     suspend fun previewFlexTask(task: FlexTaskEntity): List<PlannedSlot> = db.withTransaction {
         val tasks = flexTasks.getAll().filter { it.id != task.id } + task
-        val plan = planWeek(currentWeekStart(), LocalDateTime.now(clock), tasks) { it.flexTaskId == task.id }
+        val plan = planWeek(currentWeekStart(), now(), tasks) { it.flexTaskId == task.id }
         plan?.result?.planned.orEmpty().filter { it.taskId == task.id }
     }
 
@@ -142,7 +145,7 @@ class PlannerRepository(
         weekStart: LocalDate = currentWeekStart(),
         resetPins: Boolean = false,
     ): List<Unplaced> = db.withTransaction {
-        val plan = planWeek(weekStart, LocalDateTime.now(clock), flexTasks.getAll()) { resetPins }
+        val plan = planWeek(weekStart, now(), flexTasks.getAll()) { resetPins }
             ?: return@withTransaction emptyList()
         placements.deleteByIds(plan.stale)
         placements.insertAll(plan.result.planned.map { PlacementEntity.from(it, weekStart) })
@@ -167,7 +170,7 @@ class PlannerRepository(
         val (placement, free) = moveContext(placementId) ?: return@withTransaction false
         val endMin = startMin + placement.endMin - placement.startMin
         if (free[dayOfWeek]?.fits(startMin, endMin) != true) return@withTransaction false
-        val date = weekStartOf(placement.date).plusDays(dayOfWeek - 1L)
+        val date = weekStartOf(placement.date).plus(dayOfWeek - 1L, DateTimeUnit.DAY)
         placements.update(placement.copy(date = date, startMin = startMin, endMin = endMin, pinned = true))
         true
     }
@@ -187,15 +190,15 @@ class PlannerRepository(
         pending.forEach { placements.setStatus(it.id, decisions.getValue(it.id)) }
 
         // 시계는 한 번만 읽는다. 두 번 읽으면 주가 바뀌는 순간에 주 시작일과 절단점이 어긋난다.
-        val now = LocalDateTime.now(clock)
-        val weekStart = weekStartOf(now.toLocalDate())
+        val at = now()
+        val weekStart = weekStartOf(at.date)
         val missedCounts = pending
             .filter { decisions[it.id] == PlacementStatus.MISSED && it.date >= weekStart }
             .groupingBy { it.flexTaskId }
             .eachCount()
         if (missedCounts.isEmpty()) return@withTransaction ResolveResult()
 
-        val cutoff = checkNotNull(cutoffFor(weekStart, now)) { "이번 주에는 항상 절단점이 있다" }
+        val cutoff = checkNotNull(cutoffFor(weekStart, at)) { "이번 주에는 항상 절단점이 있다" }
         val specs = flexTasks.getAll().filter { it.id in missedCounts }.map { it.toSpec(times = missedCounts.getValue(it.id)) }
         val week = placements.getBetween(weekStart, weekEndOf(weekStart))
         val result = schedule(scheduleInput(cutoff, specs, week))
@@ -244,16 +247,16 @@ class PlannerRepository(
      */
     private suspend fun planWeek(
         weekStart: LocalDate,
-        now: LocalDateTime,
+        at: LocalDateTime,
         tasks: List<FlexTaskEntity>,
         resetPins: (PlacementEntity) -> Boolean,
     ): WeekPlan? {
-        val cutoff = cutoffFor(weekStart, now) ?: return null
+        val cutoff = cutoffFor(weekStart, at) ?: return null
         // 가용 시간에서 고정 일정만 뺀 것. 손으로 옮긴 자리가 아직 유효한지는 여기에 들어가는지로 본다.
         val open = freeSlots(scheduleInput(cutoff, emptyList(), emptyList()))
         val (stale, kept) = placements.getBetween(weekStart, weekEndOf(weekStart)).partition {
-            val stillValid = open[it.date.dayOfWeek.value]?.fits(it.startMin, it.endMin) == true
-            it.copy(pinned = it.pinned && stillValid && !resetPins(it)).isReplaceable(now.toLocalDate(), now.minuteOfDay())
+            val stillValid = open[it.date.dayOfWeek.isoDayNumber]?.fits(it.startMin, it.endMin) == true
+            it.copy(pinned = it.pinned && stillValid && !resetPins(it)).isReplaceable(at.date, at.minuteOfDay())
         }
         val specs = remainingSpecs(tasks.map { it.toSpec() }, kept.fulfilledCounts())
         return WeekPlan(stale.map { it.id }, schedule(scheduleInput(cutoff, specs, kept)))
@@ -264,7 +267,7 @@ class PlannerRepository(
         val placement = placements.getByIds(listOf(placementId)).singleOrNull()
             ?.takeIf { it.status == PlacementStatus.PLANNED } ?: return null
         val weekStart = weekStartOf(placement.date)
-        val cutoff = cutoffFor(weekStart, LocalDateTime.now(clock)) ?: return null
+        val cutoff = cutoffFor(weekStart, now()) ?: return null
         val others = placements.getBetween(weekStart, weekEndOf(weekStart)).filter { it.id != placementId }
         return placement to freeSlots(scheduleInput(cutoff, emptyList(), others))
     }

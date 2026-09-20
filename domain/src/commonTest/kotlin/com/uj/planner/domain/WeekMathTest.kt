@@ -2,30 +2,33 @@ package com.uj.planner.domain
 
 import com.uj.planner.domain.model.FlexTaskSpec
 import com.uj.planner.domain.model.Window
-import java.time.LocalDate
-import java.time.LocalDateTime
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 class WeekMathTest {
-    private val monday = LocalDate.of(2026, 9, 14)
-    private val fridayAfternoon = LocalDateTime.of(2026, 9, 18, 15, 20)
+    private val monday = LocalDate(2026, 9, 14)
+    private val fridayAfternoon = LocalDateTime(2026, 9, 18, 15, 20)
 
     private fun task(id: Long, times: Int) = FlexTaskSpec(id, 60, times, 2, Window.ANY)
 
     @Test
     fun `주의 시작은 월요일이다`() {
-        assertEquals(monday, weekStartOf(LocalDate.of(2026, 9, 18)))
+        assertEquals(monday, weekStartOf(LocalDate(2026, 9, 18)))
         assertEquals(monday, weekStartOf(monday))
-        assertEquals(monday, weekStartOf(LocalDate.of(2026, 9, 20)))
+        assertEquals(monday, weekStartOf(LocalDate(2026, 9, 20)))
     }
 
     @Test
     fun `주 이름은 목요일이 속한 달로 센다`() {
         assertEquals(9 to 3, weekOfMonth(monday))
-        assertEquals(9 to 1, weekOfMonth(LocalDate.of(2026, 8, 31)))
-        assertEquals(10 to 1, weekOfMonth(LocalDate.of(2026, 9, 28)))
+        assertEquals(9 to 1, weekOfMonth(LocalDate(2026, 8, 31)))
+        assertEquals(10 to 1, weekOfMonth(LocalDate(2026, 9, 28)))
     }
 
     @Test
@@ -35,12 +38,12 @@ class WeekMathTest {
 
     @Test
     fun `다음 주는 월요일 0시부터 쓴다`() {
-        assertEquals(Cutoff(1, 0), cutoffFor(monday.plusWeeks(1), fridayAfternoon))
+        assertEquals(Cutoff(1, 0), cutoffFor(monday.plus(1, DateTimeUnit.WEEK), fridayAfternoon))
     }
 
     @Test
     fun `지나간 주는 배치할 곳이 없다`() {
-        assertNull(cutoffFor(monday.minusWeeks(1), fridayAfternoon))
+        assertNull(cutoffFor(monday.minus(1, DateTimeUnit.WEEK), fridayAfternoon))
     }
 
     @Test

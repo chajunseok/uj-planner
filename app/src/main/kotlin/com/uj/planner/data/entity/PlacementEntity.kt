@@ -5,7 +5,10 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.uj.planner.domain.model.PlannedSlot
-import java.time.LocalDate
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.isoDayNumber
+import kotlinx.datetime.plus
 
 /**
  * 가변 일정이 실제로 놓인 자리. 조회할 때마다 계산하지 않고 저장해 둔다 —
@@ -39,12 +42,12 @@ data class PlacementEntity(
     fun isReplaceable(today: LocalDate, nowMin: Int): Boolean =
         status == PlacementStatus.PLANNED && !pinned && (date > today || (date == today && startMin >= nowMin))
 
-    fun toPlanned() = PlannedSlot(flexTaskId, date.dayOfWeek.value, startMin, endMin)
+    fun toPlanned() = PlannedSlot(flexTaskId, date.dayOfWeek.isoDayNumber, startMin, endMin)
 
     companion object {
         fun from(slot: PlannedSlot, weekStart: LocalDate) = PlacementEntity(
             flexTaskId = slot.taskId,
-            date = weekStart.plusDays(slot.dayOfWeek - 1L),
+            date = weekStart.plus(slot.dayOfWeek - 1L, DateTimeUnit.DAY),
             startMin = slot.startMin,
             endMin = slot.endMin,
         )

@@ -10,6 +10,10 @@ kotlin {
     jvm()
 
     sourceSets {
+        commonMain.dependencies {
+            // api 로 노출한다. app 이 LocalDate 를 시그니처로 주고받는다.
+            api(libs.kotlinx.datetime)
+        }
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
