@@ -60,6 +60,8 @@ kotlin {
 }
 
 dependencies {
+    // :shared 가 CMP 로 UI 를 들고 있다. :app 은 진입점과 안드로이드 전용 화면만 남아
+    // androidx.compose 를 그대로 쓴다 — 안드로이드에서는 CMP 도 결국 같은 아티팩트로 해석된다.
     implementation(project(":shared"))
 
     implementation(platform(libs.compose.bom))
