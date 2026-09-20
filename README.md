@@ -1,6 +1,6 @@
 # U.J planner
 
-갤럭시 Z 플립7용 **주간 자동 배치 플래너**.
+**주간 자동 배치 플래너**. 안드로이드와 iOS 에서 같은 앱이 돈다.
 움직이지 않는 일정(출근, 수업)만 직접 넣으면, 나머지 할 일은 앱이 이번 주 남는 시간에 알아서 넣는다.
 못 했으면 물어보고 다른 빈칸에 다시 넣는다. 서버 없이 폰 안에서만 돈다.
 
@@ -70,11 +70,11 @@
 
 | | |
 |---|---|
-| 언어 · UI | Kotlin, Jetpack Compose (Material 3, 라이트 단일 테마) |
-| 저장 | Room (SQLite), 로컬 전용 |
-| 폴더블 | `androidx.window` 의 `WindowInfoTracker` / `FoldingFeature` |
-| 구조 | 2모듈 — `domain`(순수 Kotlin, 배치 규칙과 테스트) ← `app`(Room + Compose) |
-| 대상 | minSdk 26 · targetSdk 36 (안드로이드 8.0 이상) |
+| 언어 · UI | Kotlin Multiplatform, Compose Multiplatform (Material 3, 라이트 단일 테마) |
+| 저장 | Room KMP (SQLite, 번들 드라이버), 로컬 전용 |
+| 화면 분기 | 기기 이름이 아니라 창 크기와 힌지로 판단. 안드로이드의 힌지는 `androidx.window` |
+| 구조 | 3모듈 — `domain`(배치 규칙) ← `shared`(data + ui) ← `app`(안드로이드 껍데기) |
+| 대상 | 안드로이드 8.0 이상(minSdk 26 · targetSdk 36), iOS |
 
 ```
 Room DAO (Flow) → Repository → ViewModel (StateFlow) → Composable
