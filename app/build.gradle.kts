@@ -4,7 +4,6 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.ksp)
 }
 
 // 릴리스 서명. 키와 비밀번호는 레포에 두지 않는다 — keystore.properties 는 gitignore 되어 있고 tools/make-release-key.sh 가 만든다.
@@ -62,7 +61,6 @@ kotlin {
 
 dependencies {
     implementation(project(":shared"))
-    implementation(project(":domain"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.material3)
@@ -72,7 +70,4 @@ dependencies {
     implementation(libs.navigation.compose)
     implementation(libs.window)
 
-    implementation(libs.room.runtime)
-    implementation(libs.room.ktx)
-    ksp(libs.room.compiler)
 }

@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.android.kmp.library)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.compose.multiplatform)
+    alias(libs.plugins.ksp)
 }
 
 // domain 과 같은 규칙. macOS 호스트에서만 iOS 타깃을 선언한다.
@@ -43,6 +44,24 @@ kotlin {
             implementation(compose.foundation)
             implementation(compose.material3)
             implementation(compose.ui)
+
+            implementation(libs.room.runtime)
+            implementation(libs.sqlite.bundled)
+            implementation(libs.kotlinx.coroutines.core)
         }
+    }
+}
+
+// Room 컴파일러는 타깃별 configuration 에 건다. common 메타데이터 한 번으로는 안 된다 —
+// 생성물이 플랫폼별 actual(RoomDatabaseConstructor 의 actual 과 DAO 의 _Impl)이기 때문이다.
+//
+// 설정 이름은 kspAndroid 다 — kspAndroidMain 은 **태스크** 이름이라 헷갈리기 쉽다.
+// `./gradlew :shared:dependencies | grep ^ksp` 가 "KSP dependencies for the ... source set" 이라고 알려 준다.
+dependencies {
+    add("kspAndroid", libs.room.compiler)
+    if (buildIos) {
+        add("kspIosX64", libs.room.compiler)
+        add("kspIosArm64", libs.room.compiler)
+        add("kspIosSimulatorArm64", libs.room.compiler)
     }
 }

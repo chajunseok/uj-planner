@@ -5,6 +5,9 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteException
 import android.net.Uri
 import android.provider.DocumentsContract
+import androidx.room.useReaderConnection
+import androidx.room.useWriterConnection
+import androidx.room.execSQL
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -26,7 +29,7 @@ class Backup(private val context: Context, private val database: PlannerDatabase
         snapshot.delete()
         try {
             // 파일을 그냥 복사하면 WAL 에 남은 쓰기가 빠진다. VACUUM INTO 는 그 순간의 일관된 사본을 한 파일로 만든다.
-            database.openHelper.writableDatabase.execSQL("VACUUM INTO '${snapshot.absolutePath.replace("'", "''")}'")
+            database.useWriterConnection { it.execSQL("VACUUM INTO '${snapshot.absolutePath.replace("'", "''")}'") }
             val out = context.contentResolver.openOutputStream(target, "wt") ?: throw IOException("파일을 열지 못했어요")
             out.use { snapshot.inputStream().use { input -> input.copyTo(it) } }
         } catch (e: Exception) {
@@ -58,7 +61,9 @@ class Backup(private val context: Context, private val database: PlannerDatabase
             } catch (e: SecurityException) {
                 throw BackupException("파일을 읽을 권한이 없어요. 파일을 다시 골라 주세요")
             }
-            verify(incoming)
+            // DB 를 닫기 전에 현재 스키마를 읽어 둔다.
+            val (currentVersion, currentHash) = currentSchema()
+            verify(incoming, currentVersion, currentHash)
             database.close()
             File(dbFile.path + "-wal").delete()
             File(dbFile.path + "-shm").delete()
@@ -82,20 +87,25 @@ class Backup(private val context: Context, private val database: PlannerDatabase
         }
     }
 
+    /** 지금 DB 의 (버전, 구조 지문). Room 의 드라이버 연결로 읽는다. */
+    private suspend fun currentSchema(): Pair<Int, String?> = database.useReaderConnection { connection ->
+        val version = connection.usePrepared("PRAGMA user_version") { if (it.step()) it.getLong(0).toInt() else 0 }
+        val hash = connection.usePrepared(IDENTITY_HASH) { if (it.step()) it.getText(0) else null }
+        version to hash
+    }
+
     // 구조만 본다. 앱의 내보내기가 아니라 파일 관리자로 planner.db 본체만 복사한 파일도 통과하는데, 그런 파일은 최근 쓰기가 빠져 있을 수 있다.
     // ponytail: 지금은 DB 버전이 하나뿐이라 버전과 구조가 지금과 똑같은 파일만 받는다.
     // 버전 2 와 마이그레이션이 생기면 옛 버전 파일도 받아서 Room 이 다음 실행 때 올리도록 푼다.
-    private fun verify(file: File) {
+    private fun verify(file: File, currentVersion: Int, currentHash: String?) {
         val header = ByteArray(SQLITE_HEADER.size)
         file.inputStream().use { it.read(header) }
         if (!header.contentEquals(SQLITE_HEADER)) throw BackupException(NOT_OURS)
         try {
             SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
                 if (db.single("PRAGMA quick_check") != "ok") throw BackupException("파일이 손상됐어요")
-                val current = database.openHelper.readableDatabase
-                if (db.version > current.version) throw BackupException("더 새 버전의 앱에서 내보낸 파일이에요. 앱을 먼저 업데이트해 주세요")
-                val currentHash = current.query(IDENTITY_HASH).use { if (it.moveToFirst()) it.getString(0) else null }
-                if (db.version != current.version || currentHash == null || db.single(IDENTITY_HASH) != currentHash) throw BackupException(NOT_OURS)
+                if (db.version > currentVersion) throw BackupException("더 새 버전의 앱에서 내보낸 파일이에요. 앱을 먼저 업데이트해 주세요")
+                if (db.version != currentVersion || currentHash == null || db.single(IDENTITY_HASH) != currentHash) throw BackupException(NOT_OURS)
             }
         } catch (e: SQLiteException) {
             throw BackupException(NOT_OURS)

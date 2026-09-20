@@ -1,6 +1,7 @@
 package com.uj.planner.data
 
-import androidx.room.withTransaction
+import androidx.room.Transactor.SQLiteTransactionType
+import androidx.room.useWriterConnection
 import com.uj.planner.data.entity.DayAvailabilityEntity
 import com.uj.planner.data.entity.FixedEventEntity
 import com.uj.planner.data.entity.FlexTaskEntity
@@ -52,6 +53,15 @@ class PlannerRepository(
     private val flexTasks = db.flexTasks()
     private val placements = db.placements()
     private val availability = db.availability()
+
+    /**
+     * 쓰기 트랜잭션 하나.
+     *
+     * room-ktx 의 `withTransaction` 은 aar 로만 나와 공용 코드에서 쓸 수 없다. 플랫폼에 따라
+     * 달라지는 세부는 이 함수 하나에 가두고, 부르는 쪽 아홉 군데는 모양을 그대로 둔다.
+     */
+    private suspend fun <T> tx(block: suspend () -> T): T =
+        db.useWriterConnection { it.withTransaction(SQLiteTransactionType.IMMEDIATE) { block() } }
 
     fun currentWeekStart(): LocalDate = weekStartOf(now().date)
 
@@ -127,7 +137,7 @@ class PlannerRepository(
      *
      * @throws IllegalArgumentException 값이 도메인 불변식을 어길 때.
      */
-    suspend fun previewFlexTask(task: FlexTaskEntity): List<PlannedSlot> = db.withTransaction {
+    suspend fun previewFlexTask(task: FlexTaskEntity): List<PlannedSlot> = tx {
         val tasks = flexTasks.getAll().filter { it.id != task.id } + task
         val plan = planWeek(currentWeekStart(), now(), tasks) { it.flexTaskId == task.id }
         plan?.result?.planned.orEmpty().filter { it.taskId == task.id }
@@ -144,32 +154,32 @@ class PlannerRepository(
     suspend fun recomputeWeek(
         weekStart: LocalDate = currentWeekStart(),
         resetPins: Boolean = false,
-    ): List<Unplaced> = db.withTransaction {
+    ): List<Unplaced> = tx {
         val plan = planWeek(weekStart, now(), flexTasks.getAll()) { resetPins }
-            ?: return@withTransaction emptyList()
+            ?: return@tx emptyList()
         placements.deleteByIds(plan.stale)
         placements.insertAll(plan.result.planned.map { PlacementEntity.from(it, weekStart) })
         plan.result.unplaced
     }
 
     /** 아직 한 번도 짜지 않은 주를 처음 볼 때 짠다. 새 주에 들어섰을 때와 다음 주를 미리 볼 때 쓴다. */
-    suspend fun ensureWeekPlanned(weekStart: LocalDate) = db.withTransaction {
+    suspend fun ensureWeekPlanned(weekStart: LocalDate) = tx {
         if (placements.getBetween(weekStart, weekEndOf(weekStart)).isEmpty()) recomputeWeek(weekStart)
     }
 
     /** 배치 [placementId] 를 옮길 수 있는 요일별 빈칸. 옮길 수 없는 배치면 빈 맵. */
     suspend fun freeSlotsForMove(placementId: Long): Map<Int, List<Slot>> =
-        db.withTransaction { moveContext(placementId)?.second.orEmpty() }
+        tx { moveContext(placementId)?.second.orEmpty() }
 
     /**
      * 사용자가 블록을 손으로 옮긴다. 옮긴 자리는 고정되어 이후 재계산에서도 유지된다.
      *
      * @return 그 자리가 비어 있지 않아 옮기지 못했으면 false.
      */
-    suspend fun movePlacement(placementId: Long, dayOfWeek: Int, startMin: Int): Boolean = db.withTransaction {
-        val (placement, free) = moveContext(placementId) ?: return@withTransaction false
+    suspend fun movePlacement(placementId: Long, dayOfWeek: Int, startMin: Int): Boolean = tx {
+        val (placement, free) = moveContext(placementId) ?: return@tx false
         val endMin = startMin + placement.endMin - placement.startMin
-        if (free[dayOfWeek]?.fits(startMin, endMin) != true) return@withTransaction false
+        if (free[dayOfWeek]?.fits(startMin, endMin) != true) return@tx false
         val date = weekStartOf(placement.date).plus(dayOfWeek - 1L, DateTimeUnit.DAY)
         placements.update(placement.copy(date = date, startMin = startMin, endMin = endMin, pinned = true))
         true
@@ -182,7 +192,7 @@ class PlannerRepository(
      *
      * @param decisions 배치 id → [PlacementStatus.DONE]·[PlacementStatus.MISSED]·[PlacementStatus.DROPPED] 중 하나.
      */
-    suspend fun resolveMissed(decisions: Map<Long, PlacementStatus>): ResolveResult = db.withTransaction {
+    suspend fun resolveMissed(decisions: Map<Long, PlacementStatus>): ResolveResult = tx {
         require(PlacementStatus.PLANNED !in decisions.values) { "PLANNED 는 밀린 일정에 대한 답이 아니다" }
         // 아직 답을 받지 않은 배치에만 적용한다. 같은 답이 두 번 들어와도 재배치가 두 번 생기지 않고,
         // 이미 완료·버림으로 확정된 배치를 덮어쓰지도 않는다.
@@ -196,7 +206,7 @@ class PlannerRepository(
             .filter { decisions[it.id] == PlacementStatus.MISSED && it.date >= weekStart }
             .groupingBy { it.flexTaskId }
             .eachCount()
-        if (missedCounts.isEmpty()) return@withTransaction ResolveResult()
+        if (missedCounts.isEmpty()) return@tx ResolveResult()
 
         val cutoff = checkNotNull(cutoffFor(weekStart, at)) { "이번 주에는 항상 절단점이 있다" }
         val specs = flexTasks.getAll().filter { it.id in missedCounts }.map { it.toSpec(times = missedCounts.getValue(it.id)) }
@@ -212,24 +222,24 @@ class PlannerRepository(
      * @return 무를 수 없는 상태라 아무것도 바꾸지 않았으면 false. 새로 잡힌 자리가 그 사이 재계산으로 바뀌었거나
      *   이미 답을 받았다면, 되돌릴 때 그 자리가 남아 주당 횟수를 넘기게 된다.
      */
-    suspend fun undoResolve(placementId: Long, movedIds: List<Long>): Boolean = db.withTransaction {
+    suspend fun undoResolve(placementId: Long, movedIds: List<Long>): Boolean = tx {
         val answered = placements.getByIds(listOf(placementId)).singleOrNull()
         val moved = placements.getByIds(movedIds)
         val intact = moved.size == movedIds.size && moved.all { it.status == PlacementStatus.PLANNED }
-        if (answered == null || answered.status == PlacementStatus.PLANNED || !intact) return@withTransaction false
+        if (answered == null || answered.status == PlacementStatus.PLANNED || !intact) return@tx false
         placements.deleteByIds(movedIds)
         placements.setStatus(placementId, PlacementStatus.PLANNED)
         true
     }
 
     /** `못함` 으로 답했지만 다시 넣을 빈칸이 없던 배치를 이번 주에서 포기한다. 포기한 횟수는 채운 것으로 쳐서 다시 배치하지 않는다. */
-    suspend fun dropMissed(placementId: Long) = db.withTransaction {
+    suspend fun dropMissed(placementId: Long) = tx {
         val placement = placements.getByIds(listOf(placementId)).singleOrNull()
         if (placement?.status == PlacementStatus.MISSED) placements.setStatus(placementId, PlacementStatus.DROPPED)
     }
 
     private suspend fun writeThenRecompute(write: suspend () -> Unit) {
-        db.withTransaction {
+        tx {
             write()
             // 아직 오지 않은 주는 옛 조건으로 짜여 있다. 지워 두면 볼 때 새 조건으로 다시 짠다.
             placements.deletePlannedAfter(weekEndOf(currentWeekStart()))
