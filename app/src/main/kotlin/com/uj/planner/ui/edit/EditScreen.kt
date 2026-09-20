@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
@@ -59,6 +59,7 @@ import com.uj.planner.ui.components.SectionLabel
 import com.uj.planner.ui.components.Segmented
 import com.uj.planner.ui.components.Stepper
 import com.uj.planner.ui.components.TimeStepper
+import com.uj.planner.ui.components.readableWidth
 import com.uj.planner.ui.formatRange
 import com.uj.planner.ui.formatTime
 import com.uj.planner.ui.icons.UjIcons
@@ -88,7 +89,7 @@ fun EditScreen(viewModel: EditViewModel, onClose: () -> Unit) {
             Column(Modifier.background(MaterialTheme.colorScheme.surfaceContainer)) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                 Column(
-                    Modifier.navigationBarsPadding().imePadding().padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 8.dp),
+                    Modifier.navigationBarsPadding().imePadding().readableWidth().padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     viewModel.error?.let {
@@ -115,7 +116,7 @@ fun EditScreen(viewModel: EditViewModel, onClose: () -> Unit) {
             }
         },
     ) { padding ->
-        Column(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 16.dp)) {
+        Column(Modifier.padding(padding).fillMaxHeight().verticalScroll(rememberScrollState()).readableWidth().padding(horizontal = 20.dp).padding(bottom = 16.dp)) {
             if (viewModel.isNew) {
                 Segmented(
                     options = EditKind.entries,

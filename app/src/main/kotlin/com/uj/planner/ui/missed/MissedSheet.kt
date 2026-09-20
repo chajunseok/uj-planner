@@ -44,6 +44,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.uj.planner.data.entity.PlacementStatus
+import com.uj.planner.ui.components.readableWidth
 import com.uj.planner.ui.formatDuration
 import com.uj.planner.ui.icons.UjIcons
 import com.uj.planner.ui.theme.PlannerColors
@@ -69,7 +70,7 @@ fun MissedSheet(viewModel: MissedViewModel) {
             containerColor = MaterialTheme.colorScheme.surface,
         ) {
             Column(
-                Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 12.dp),
+                Modifier.verticalScroll(rememberScrollState()).readableWidth().padding(horizontal = 16.dp).padding(bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 val total = state.pending.size + state.resolved.size
