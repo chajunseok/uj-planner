@@ -37,6 +37,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.uj.planner.domain.weekEndOf
@@ -204,7 +206,8 @@ private fun WeekBottomBar(
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                     shape = RoundedCornerShape(18.dp),
-                    modifier = Modifier.height(48.dp),
+                    // 확장 FAB 의 Text 는 시맨틱스 트리에 오르지 않아 라벨 없는 버튼으로 읽힌다. 직접 붙인다.
+                    modifier = Modifier.height(48.dp).semantics { contentDescription = "일정 추가" },
                 )
             }
         }
