@@ -3,6 +3,7 @@ package com.uj.planner.ui.today
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.uj.planner.data.PlannerRepository
+import com.uj.planner.data.entity.FixedEventEntity
 import com.uj.planner.data.entity.FlexTaskEntity
 import com.uj.planner.data.entity.PlacementStatus
 import com.uj.planner.domain.minuteOfDay
@@ -24,7 +25,13 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import java.time.LocalDateTime
+
+/** 그 날 반복되는 고정 일정을 타임라인 한 줄로 바꾼다. 오늘과 내일이 같은 규칙을 쓰도록 한곳에 둔다. */
+private fun fixedItemsOn(fixed: List<FixedEventEntity>, date: LocalDate) =
+    fixed.filter { it.dayOfWeek == date.dayOfWeek.value }
+        .map { TodayItem(it.title, it.startMin, it.startMin + it.durationMin) }
 
 /** 오늘 타임라인의 한 줄. 고정 일정이면 [color]·[status] 가 null 이다. */
 data class TodayItem(
@@ -87,13 +94,16 @@ class TodayViewModel(private val repository: PlannerRepository) : ViewModel() {
             )
             p.id to item
         }
-        val items = (fixed.filter { it.dayOfWeek == today.dayOfWeek.value }
-            .map { TodayItem(it.title, it.startMin, it.startMin + it.durationMin) } + flexToday.map { it.second })
-            .sortedBy { it.startMin }
-        val tomorrowFirst = placements
-            .filter { it.date == today.plusDays(1) && it.status == PlacementStatus.PLANNED }
+        val items = (fixedItemsOn(fixed, today) + flexToday.map { it.second }).sortedBy { it.startMin }
+        val tomorrow = today.plusDays(1)
+        // "첫 일정" 이라고 말하므로 고정 일정도 함께 본다. 가변만 보면 아침 고정 일정을 건너뛴 시각을 말하게 된다.
+        val tomorrowFirst = (
+            fixedItemsOn(fixed, tomorrow) +
+                placements.filter { it.date == tomorrow && it.status == PlacementStatus.PLANNED }
+                    .mapNotNull { p -> tasksById[p.flexTaskId]?.let { TodayItem(it.title, p.startMin, p.endMin) } }
+            )
             .minByOrNull { it.startMin }
-            ?.let { p -> tasksById[p.flexTaskId]?.let { "내일 첫 일정: ${formatTime(p.startMin)} ${it.title}" } }
+            ?.let { "내일 첫 일정: ${formatTime(it.startMin)} ${it.title}" }
         Snapshot(now, items, flexToday, tomorrowFirst.orEmpty(), tasksById)
     }.mapLatest { s ->
         // 밀린 일정의 판정은 Repository 의 것을 그대로 쓴다. 같은 조건을 여기에 다시 적지 않는다.
