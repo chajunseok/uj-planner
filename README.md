@@ -83,7 +83,7 @@ Room DAO (Flow) → Repository → ViewModel (StateFlow) → Composable
 배치 알고리즘은 안드로이드에 의존하지 않는 순수 함수라 `domain` 모듈에서 JUnit 으로 검증한다.
 
 ```bash
-./gradlew :domain:test          # 배치 규칙 테스트
+./gradlew :domain:jvmTest       # 배치 규칙 테스트
 ./gradlew :app:assembleDebug    # 디버그 빌드
 ./gradlew :app:assembleRelease  # 릴리스 APK (서명 키 필요 — GUIDE.md)
 ```

@@ -88,7 +88,7 @@ docs: 배치 규칙 설명 보강
 
 ```
 uj-planner/
-├── domain/     Kotlin JVM. 배치 규칙과 그 입출력 타입만
+├── domain/     Kotlin Multiplatform(지금은 jvm 타깃만). 배치 규칙과 그 입출력 타입만
 └── app/        안드로이드. data(Room) + ui(Compose)
 ```
 
@@ -97,7 +97,7 @@ uj-planner/
 왜 필요한지부터 따진다.
 
 ```
-domain/src/main/kotlin/com/uj/planner/domain/
+domain/src/jvmMain/kotlin/com/uj/planner/domain/
 ├── model/        FixedBlock, FlexTaskSpec, Window, Slot, ScheduleResult
 ├── Scheduler.kt  schedule(ScheduleInput) 과 freeSlots(ScheduleInput) — 순수 함수
 └── WeekMath.kt   주 시작일·절단점·남은 횟수 — Repository 가 쓰는 순수 계산
@@ -136,7 +136,7 @@ Room DAO (Flow) → Repository → ViewModel (StateFlow) → Composable
 `Makefile`이 없다. 아래 Gradle 명령이 이 레포의 검증 명령이다.
 
 ```bash
-./gradlew :domain:test             # 스케줄러 테스트 — 가장 먼저 돌린다
+./gradlew :domain:jvmTest          # 스케줄러 테스트 — 가장 먼저 돌린다
 ./gradlew :app:assembleDebug       # 빌드
 ./gradlew :app:installDebug        # 에뮬레이터에 설치
 
@@ -144,7 +144,7 @@ Room DAO (Flow) → Repository → ViewModel (StateFlow) → Composable
 find . -name "*.kt" -not -path "*/build/*" | xargs wc -l | awk '$1 > 500 && $2 != "total"'
 ```
 
-커밋 전에 최소한 `:domain:test` 와 `:app:assembleDebug` 가 통과하고, 500줄 검사 출력이 비어 있어야 한다.
+커밋 전에 최소한 `:domain:jvmTest` 와 `:app:assembleDebug` 가 통과하고, 500줄 검사 출력이 비어 있어야 한다.
 
 ## 릴리스 빌드와 서명
 
@@ -196,7 +196,7 @@ SDK 경로는 `ANDROID_HOME` 이 없으면 OS 별 기본 위치에서 찾는다.
 | enum | Room 이 이름 문자열로 직접 저장한다. 컨버터를 만들지 않는다. **상수 이름을 바꾸면 기존 데이터가 깨진다** |
 | 요일 | `java.time.DayOfWeek.value` (월=1 … 일=7) |
 | 배치 실패 | `ScheduleResult.unplaced`로 **반환**한다. 예외를 던지거나 조용히 버리지 않는다 |
-| 테스트 | `domain/src/test/`에 순수 JUnit. 계측 테스트를 만들지 않는다. **DB 와 무관한 계산은 `domain` 으로 빼서 거기서 검증한다** — Repository 에는 읽기·계산 호출·쓰기만 남긴다 |
+| 테스트 | `domain/src/jvmTest/`에 순수 JUnit. 계측 테스트를 만들지 않는다. **DB 와 무관한 계산은 `domain` 으로 빼서 거기서 검증한다** — Repository 에는 읽기·계산 호출·쓰기만 남긴다 |
 | DI | 프레임워크 없이 `Application`에서 직접 조립한다. 생성자 주입만 지킨다 |
 | 아이콘 | `ui/icons/UjIcons.kt` 에만 둔다. **아이콘 라이브러리를 다시 들이지 않는다** — 쓰는 것만 경로 데이터로 담는다 |
 
