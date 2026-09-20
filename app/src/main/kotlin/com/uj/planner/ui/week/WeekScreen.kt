@@ -36,6 +36,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.uj.planner.domain.nowLocalDateTime
 import com.uj.planner.domain.weekEndOf
 import com.uj.planner.domain.weekOfMonth
 import com.uj.planner.ui.edit.EditKind
@@ -44,19 +45,20 @@ import com.uj.planner.ui.missed.MissedSheet
 import com.uj.planner.ui.missed.MissedViewModel
 import com.uj.planner.ui.theme.PlannerColors
 import com.uj.planner.ui.theme.serif
-import java.time.LocalDate
-import java.time.LocalDateTime
 import kotlinx.coroutines.delay
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.number
 
 private val ORDINALS = listOf("첫째", "둘째", "셋째", "넷째", "다섯째")
 
 /** 현재 시각. 현재 시각선과 "진행 중" 표시가 따라 움직이도록 30초마다 갱신한다. */
 @Composable
 fun rememberNow(): LocalDateTime {
-    val now by produceState(LocalDateTime.now()) {
+    val now by produceState(nowLocalDateTime()) {
         while (true) {
             delay(30_000)
-            value = LocalDateTime.now()
+            value = nowLocalDateTime()
         }
     }
     return now
@@ -107,7 +109,7 @@ fun WeekScreen(
             }
             Box(Modifier.weight(1f)) {
                 Column {
-                    DayHeader(state.weekStart, now.toLocalDate(), Modifier.padding(top = 8.dp))
+                    DayHeader(state.weekStart, now.date, Modifier.padding(top = 8.dp))
                     WeekGrid(
                         state = state,
                         now = now,
@@ -161,7 +163,7 @@ fun WeekScreen(
 private fun WeekHeader(weekStart: LocalDate, isThisWeek: Boolean, onSettings: () -> Unit) {
     val (month, ordinal) = weekOfMonth(weekStart)
     val end = weekEndOf(weekStart)
-    val range = "${weekStart.monthValue}.${weekStart.dayOfMonth} – ${end.monthValue}.${end.dayOfMonth}"
+    val range = "${weekStart.month.number}.${weekStart.day} – ${end.month.number}.${end.day}"
     Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text("${month}월 ${ORDINALS[ordinal - 1]} 주", style = MaterialTheme.typography.titleMedium.serif())

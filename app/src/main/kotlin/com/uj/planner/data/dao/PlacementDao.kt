@@ -7,7 +7,7 @@ import androidx.room.Update
 import com.uj.planner.data.entity.PlacementEntity
 import com.uj.planner.data.entity.PlacementStatus
 import kotlinx.coroutines.flow.Flow
-import java.time.LocalDate
+import kotlinx.datetime.LocalDate
 
 @Dao
 interface PlacementDao {

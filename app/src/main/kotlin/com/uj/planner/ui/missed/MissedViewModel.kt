@@ -19,12 +19,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.datetime.isoDayNumber
 
 /** 끝났는데 아직 답을 받지 못한 배치 하나. */
 data class MissedItem(val placement: PlacementEntity, val title: String, val color: TaskColor) {
     /** "화 20:00 – 21:00 · 1시간" */
     fun whenText(): String = with(placement) {
-        "${DAY_NAMES[date.dayOfWeek.value - 1]} ${formatRange(startMin, endMin)} · ${formatDuration(endMin - startMin)}"
+        "${DAY_NAMES[date.dayOfWeek.isoDayNumber - 1]} ${formatRange(startMin, endMin)} · ${formatDuration(endMin - startMin)}"
     }
 }
 

@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.uj.planner.data.entity.DayAvailabilityEntity
 import com.uj.planner.domain.GRID_MIN
+import com.uj.planner.domain.nowLocalDateTime
 import com.uj.planner.ui.DAY_NAMES
 import com.uj.planner.ui.components.ScreenHeader
 import com.uj.planner.ui.components.Stepper
@@ -58,10 +59,23 @@ import com.uj.planner.ui.components.readableWidth
 import com.uj.planner.ui.formatTime
 import com.uj.planner.ui.icons.UjIcons
 import com.uj.planner.ui.theme.PlannerColors
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.number
 
 private const val MIDNIGHT = 24 * 60
+
+/**
+ * 내보내기 파일 이름에 붙이는 YYYYMMDD.
+ *
+ * kotlinx-datetime 에는 java.time 의 DateTimeFormatter 같은 것이 없어서 직접 조립한다.
+ * 파일 이름 하나 때문에 포매터를 들이지 않는다.
+ */
+private fun exportStamp(): String {
+    val today = nowLocalDateTime().date
+    return "${today.year}${today.month.number.pad()}${today.day.pad()}"
+}
+
+private fun Int.pad(): String = toString().padStart(2, '0')
 
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
@@ -109,7 +123,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     color = PlannerColors.Muted,
                 )
                 Row(Modifier.padding(top = 14.dp, bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PillButton(UjIcons.FileUpload, "내보내기") { exportLauncher.launch("uj-planner-${LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE)}.db") }
+                    PillButton(UjIcons.FileUpload, "내보내기") { exportLauncher.launch("uj-planner-${exportStamp()}.db") }
                     PillButton(UjIcons.FileDownload, "가져오기") { importLauncher.launch(arrayOf("*/*")) }
                 }
             }

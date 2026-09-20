@@ -7,6 +7,7 @@ import com.uj.planner.data.entity.FixedEventEntity
 import com.uj.planner.data.entity.FlexTaskEntity
 import com.uj.planner.data.entity.PlacementStatus
 import com.uj.planner.domain.minuteOfDay
+import com.uj.planner.domain.nowLocalDateTime
 import com.uj.planner.ui.DAY_NAMES
 import com.uj.planner.ui.formatDuration
 import com.uj.planner.ui.formatRange
@@ -25,12 +26,15 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.LocalDate
-import java.time.LocalDateTime
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.isoDayNumber
+import kotlinx.datetime.plus
 
 /** 그 날 반복되는 고정 일정을 타임라인 한 줄로 바꾼다. 오늘과 내일이 같은 규칙을 쓰도록 한곳에 둔다. */
 private fun fixedItemsOn(fixed: List<FixedEventEntity>, date: LocalDate) =
-    fixed.filter { it.dayOfWeek == date.dayOfWeek.value }
+    fixed.filter { it.dayOfWeek == date.dayOfWeek.isoDayNumber }
         .map { TodayItem(it.title, it.startMin, it.startMin + it.durationMin) }
 
 /** 오늘 타임라인의 한 줄. 고정 일정이면 [color]·[status] 가 null 이다. */
@@ -71,7 +75,7 @@ data class TodayUiState(val now: LocalDateTime, val items: List<TodayItem>, val 
 class TodayViewModel(private val repository: PlannerRepository) : ViewModel() {
     private val clock = flow {
         while (true) {
-            emit(LocalDateTime.now())
+            emit(nowLocalDateTime())
             delay(30_000)
         }
     }
@@ -83,7 +87,7 @@ class TodayViewModel(private val repository: PlannerRepository) : ViewModel() {
         // 앱을 켜 둔 채 일요일 자정을 넘기면 새 주를 다시 구독한다.
         clock.map { repository.currentWeekStart() }.distinctUntilChanged().flatMapLatest(repository::observeWeek),
     ) { now, fixed, tasks, placements ->
-        val today = now.toLocalDate()
+        val today = now.date
         val nowMin = now.minuteOfDay()
         val tasksById = tasks.associateBy { it.id }
         val flexToday = placements.filter { it.date == today }.mapNotNull { p ->
@@ -95,7 +99,7 @@ class TodayViewModel(private val repository: PlannerRepository) : ViewModel() {
             p.id to item
         }
         val items = (fixedItemsOn(fixed, today) + flexToday.map { it.second }).sortedBy { it.startMin }
-        val tomorrow = today.plusDays(1)
+        val tomorrow = today.plus(1, DateTimeUnit.DAY)
         // "첫 일정" 이라고 말하므로 고정 일정도 함께 본다. 가변만 보면 아침 고정 일정을 건너뛴 시각을 말하게 된다.
         val tomorrowFirst = (
             fixedItemsOn(fixed, tomorrow) +
@@ -117,7 +121,7 @@ class TodayViewModel(private val repository: PlannerRepository) : ViewModel() {
                 overdue != null && overdueTask != null -> Focus(
                     Focus.Kind.OVERDUE,
                     // 오늘 것이 아니면 요일을 붙인다. 시각만으로는 언제 것인지 알 수 없다.
-                    kicker = (if (overdue.date == s.now.toLocalDate()) "" else "${DAY_NAMES[overdue.date.dayOfWeek.value - 1]} ") +
+                    kicker = (if (overdue.date == s.now.date) "" else "${DAY_NAMES[overdue.date.dayOfWeek.isoDayNumber - 1]} ") +
                         "${formatRange(overdue.startMin, overdue.endMin)} · 지났어요",
                     title = overdueTask.title,
                     sub = "못함을 누르면 이번 주 빈칸에 다시 넣어요",

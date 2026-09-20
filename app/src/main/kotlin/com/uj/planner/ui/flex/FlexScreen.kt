@@ -54,6 +54,8 @@ import com.uj.planner.ui.today.TodayItem
 import com.uj.planner.ui.today.TodayUiState
 import com.uj.planner.ui.week.label
 import com.uj.planner.ui.week.outline
+import kotlinx.datetime.isoDayNumber
+import kotlinx.datetime.number
 
 /** 힌지 위아래로 이만큼은 아무것도 두지 않는다. 접힌 자리는 굽어 있어서 글자와 버튼이 뭉개진다. */
 private val HINGE_KEEP_OUT = 16.dp
@@ -69,11 +71,11 @@ fun FlexScreen(state: TodayUiState, hingeTop: Dp, hingeBottom: Dp, onAnswer: (Lo
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
         Column {
             Column(Modifier.height((hingeTop - HINGE_KEEP_OUT).coerceAtLeast(0.dp)).statusBarsPadding()) {
-                val date = state.now.toLocalDate()
+                val date = state.now.date
                 Row(Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("${DAY_NAMES[date.dayOfWeek.value - 1]}요일", style = MaterialTheme.typography.titleLarge, modifier = Modifier.alignByBaseline())
+                    Text("${DAY_NAMES[date.dayOfWeek.isoDayNumber - 1]}요일", style = MaterialTheme.typography.titleLarge, modifier = Modifier.alignByBaseline())
                     Text(
-                        "${date.monthValue}월 ${date.dayOfMonth}일 · " + if (state.remaining > 0) "남은 일정 ${state.remaining}개" else "남은 일정 없음",
+                        "${date.month.number}월 ${date.day}일 · " + if (state.remaining > 0) "남은 일정 ${state.remaining}개" else "남은 일정 없음",
                         fontSize = 13.sp,
                         color = PlannerColors.Muted,
                         modifier = Modifier.alignByBaseline(),

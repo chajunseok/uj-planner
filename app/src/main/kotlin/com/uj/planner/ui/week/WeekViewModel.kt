@@ -16,7 +16,10 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.LocalDate
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.isoDayNumber
+import kotlinx.datetime.plus
 
 /** 그리드에 그릴 블록 하나. 고정 일정이면 [status]·[color] 가 null 이다. */
 data class WeekBlock(
@@ -71,7 +74,7 @@ class WeekViewModel(private val repository: PlannerRepository) : ViewModel() {
             } + placements.mapNotNull { p ->
                 val task = tasksById[p.flexTaskId] ?: return@mapNotNull null
                 WeekBlock(
-                    task.title, p.date.dayOfWeek.value, p.startMin, p.endMin,
+                    task.title, p.date.dayOfWeek.isoDayNumber, p.startMin, p.endMin,
                     placementId = p.id, flexTaskId = task.id, color = TaskColor.of(task.colorIndex), status = p.status,
                 )
             }
@@ -104,7 +107,7 @@ class WeekViewModel(private val repository: PlannerRepository) : ViewModel() {
     }
 
     fun shiftWeek(delta: Long) {
-        weekStart.value = weekStart.value.plusWeeks(delta)
+        weekStart.value = weekStart.value.plus(delta, DateTimeUnit.WEEK)
     }
 
     fun goToThisWeek() {
