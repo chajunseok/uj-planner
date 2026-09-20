@@ -12,11 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.OpenWith
-import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -45,6 +40,7 @@ import com.uj.planner.ui.DAY_NAMES
 import com.uj.planner.ui.abbreviate
 import com.uj.planner.ui.formatRange
 import com.uj.planner.ui.formatTime
+import com.uj.planner.ui.icons.UjIcons
 import com.uj.planner.ui.theme.BlockSubStyle
 import com.uj.planner.ui.theme.PlannerColors
 
@@ -100,10 +96,10 @@ fun BlockView(block: WeekBlock, inProgress: Boolean, dragging: Boolean, modifier
         else -> block.color.bg
     }
     val icon = when {
-        dragging -> Icons.Rounded.OpenWith
-        status == PlacementStatus.DONE -> Icons.Rounded.CheckCircle
-        status == PlacementStatus.MISSED -> Icons.Rounded.Replay
-        status == PlacementStatus.DROPPED -> Icons.Rounded.Close
+        dragging -> UjIcons.OpenWith
+        status == PlacementStatus.DONE -> UjIcons.CheckCircle
+        status == PlacementStatus.MISSED -> UjIcons.Replay
+        status == PlacementStatus.DROPPED -> UjIcons.Close
         else -> null
     }
     val struck = status == PlacementStatus.DONE || status == PlacementStatus.DROPPED

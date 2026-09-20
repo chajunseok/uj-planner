@@ -1,11 +1,15 @@
 package com.uj.planner.ui.flex
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,40 +20,32 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Replay
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.uj.planner.ui.week.outline
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.border
-import androidx.compose.foundation.BorderStroke
 import com.uj.planner.data.entity.PlacementStatus
 import com.uj.planner.ui.DAY_NAMES
 import com.uj.planner.ui.formatRange
 import com.uj.planner.ui.formatTime
+import com.uj.planner.ui.icons.UjIcons
 import com.uj.planner.ui.theme.PlannerColors
 import com.uj.planner.ui.today.Focus
 import com.uj.planner.ui.today.FocusPrimaryButton
@@ -57,6 +53,7 @@ import com.uj.planner.ui.today.FocusText
 import com.uj.planner.ui.today.TodayItem
 import com.uj.planner.ui.today.TodayUiState
 import com.uj.planner.ui.week.label
+import com.uj.planner.ui.week.outline
 
 /** 힌지 위아래로 이만큼은 아무것도 두지 않는다. 접힌 자리는 굽어 있어서 글자와 버튼이 뭉개진다. */
 private val HINGE_KEEP_OUT = 16.dp
@@ -116,7 +113,7 @@ fun FlexScreen(state: TodayUiState, hingeTop: Dp, hingeBottom: Dp, onAnswer: (Lo
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurface),
                                 modifier = Modifier.weight(1f).height(56.dp),
                             ) {
-                                Icon(Icons.Rounded.Replay, contentDescription = null, modifier = Modifier.size(20.dp))
+                                Icon(UjIcons.Replay, contentDescription = null, modifier = Modifier.size(20.dp))
                                 Text("못함", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp))
                             }
                         }
@@ -201,9 +198,9 @@ private fun TimelineRow(item: TodayItem, last: Boolean) {
                 )
             }
             val icon = when (item.status) {
-                PlacementStatus.DONE -> Icons.Rounded.CheckCircle
-                PlacementStatus.MISSED -> Icons.Rounded.Replay
-                PlacementStatus.DROPPED -> Icons.Rounded.Close
+                PlacementStatus.DONE -> UjIcons.CheckCircle
+                PlacementStatus.MISSED -> UjIcons.Replay
+                PlacementStatus.DROPPED -> UjIcons.Close
                 else -> null
             }
             if (icon != null) Icon(icon, contentDescription = item.status.label, tint = fg, modifier = Modifier.size(18.dp))

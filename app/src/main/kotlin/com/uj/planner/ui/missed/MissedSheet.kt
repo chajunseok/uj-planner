@@ -17,13 +17,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.EditCalendar
-import androidx.compose.material.icons.rounded.Autorenew
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -52,6 +45,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.uj.planner.data.entity.PlacementStatus
 import com.uj.planner.ui.formatDuration
+import com.uj.planner.ui.icons.UjIcons
 import com.uj.planner.ui.theme.PlannerColors
 
 /**
@@ -121,7 +115,7 @@ fun MissedSheet(viewModel: MissedViewModel) {
                     Box(
                         Modifier.size(40.dp).background(MaterialTheme.colorScheme.tertiaryContainer, RoundedCornerShape(12.dp)),
                         contentAlignment = Alignment.Center,
-                    ) { Icon(Icons.Outlined.EditCalendar, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer) }
+                    ) { Icon(UjIcons.EditCalendar, contentDescription = null, tint = MaterialTheme.colorScheme.onTertiaryContainer) }
                     Text("이번 주엔 빈칸이 없어요", style = MaterialTheme.typography.titleLarge)
                 }
             },
@@ -141,7 +135,7 @@ fun MissedSheet(viewModel: MissedViewModel) {
             },
             confirmButton = {
                 Button(onClick = viewModel::replanNoRoom, modifier = Modifier.height(44.dp)) {
-                    Icon(Icons.Rounded.Autorenew, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(UjIcons.Autorenew, contentDescription = null, modifier = Modifier.size(18.dp))
                     Text("다시 짜기", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = 6.dp))
                 }
             },
@@ -160,7 +154,7 @@ private fun ResolvedRow(line: ResolvedLine, onUndo: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = fg, modifier = Modifier.size(22.dp))
+        Icon(UjIcons.CheckCircle, contentDescription = null, tint = fg, modifier = Modifier.size(22.dp))
         Column(Modifier.weight(1f)) {
             Text(line.text, style = MaterialTheme.typography.labelLarge, color = fg)
             Text(line.detail, style = MaterialTheme.typography.bodySmall, color = fg.copy(alpha = 0.8f))
@@ -193,10 +187,10 @@ private fun PendingCard(item: MissedItem, onAnswer: (PlacementStatus) -> Unit) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             val pad = PaddingValues(horizontal = 4.dp)
             Button(onClick = { onAnswer(PlacementStatus.DONE) }, shape = button, contentPadding = pad, modifier = Modifier.weight(1.3f).height(48.dp)) {
-                AnswerLabel(Icons.Rounded.Check, "했음")
+                AnswerLabel(UjIcons.Check, "했음")
             }
             FilledTonalButton(onClick = { onAnswer(PlacementStatus.MISSED) }, shape = button, contentPadding = pad, modifier = Modifier.weight(1f).height(48.dp)) {
-                AnswerLabel(Icons.Rounded.Replay, "못함")
+                AnswerLabel(UjIcons.Replay, "못함")
             }
             OutlinedButton(
                 onClick = { onAnswer(PlacementStatus.DROPPED) },
@@ -205,7 +199,7 @@ private fun PendingCard(item: MissedItem, onAnswer: (PlacementStatus) -> Unit) {
                 border = BorderStroke(1.dp, PlannerColors.FaintOutline),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
                 modifier = Modifier.weight(1f).height(48.dp),
-            ) { AnswerLabel(Icons.Rounded.Close, "버림") }
+            ) { AnswerLabel(UjIcons.Close, "버림") }
         }
     }
 }

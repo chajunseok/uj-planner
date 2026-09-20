@@ -22,14 +22,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.FileDownload
-import androidx.compose.material.icons.outlined.FileUpload
-import androidx.compose.material.icons.rounded.Autorenew
-import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -63,6 +55,7 @@ import com.uj.planner.ui.components.ScreenHeader
 import com.uj.planner.ui.components.Stepper
 import com.uj.planner.ui.components.outlinedBox
 import com.uj.planner.ui.formatTime
+import com.uj.planner.ui.icons.UjIcons
 import com.uj.planner.ui.theme.PlannerColors
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -83,7 +76,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
     }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> pendingImport = uri }
 
-    Scaffold(topBar = { ScreenHeader("설정", Icons.AutoMirrored.Rounded.ArrowBack, "뒤로", onBack) }) { padding ->
+    Scaffold(topBar = { ScreenHeader("설정", UjIcons.ArrowBack, "뒤로", onBack) }) { padding ->
         Column(Modifier.padding(padding).fillMaxSize().padding(horizontal = 20.dp)) {
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                 Text("배치 가능 시간대", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
@@ -94,8 +87,8 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     color = PlannerColors.Muted,
                 )
                 Row(Modifier.padding(top = 14.dp, bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PillButton(Icons.Outlined.ContentCopy, "월 → 평일 전체", enabled = days.isNotEmpty()) { viewModel.copy(from = 1, to = 1..5) }
-                    PillButton(Icons.Outlined.ContentCopy, "토 → 주말", enabled = days.isNotEmpty()) { viewModel.copy(from = 6, to = 6..7) }
+                    PillButton(UjIcons.ContentCopy, "월 → 평일 전체", enabled = days.isNotEmpty()) { viewModel.copy(from = 1, to = 1..5) }
+                    PillButton(UjIcons.ContentCopy, "토 → 주말", enabled = days.isNotEmpty()) { viewModel.copy(from = 6, to = 6..7) }
                 }
                 days.forEach { day ->
                     DayRow(
@@ -115,8 +108,8 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     color = PlannerColors.Muted,
                 )
                 Row(Modifier.padding(top = 14.dp, bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PillButton(Icons.Outlined.FileUpload, "내보내기") { exportLauncher.launch("uj-planner-${LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE)}.db") }
-                    PillButton(Icons.Outlined.FileDownload, "가져오기") { importLauncher.launch(arrayOf("*/*")) }
+                    PillButton(UjIcons.FileUpload, "내보내기") { exportLauncher.launch("uj-planner-${LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE)}.db") }
+                    PillButton(UjIcons.FileDownload, "가져오기") { importLauncher.launch(arrayOf("*/*")) }
                 }
             }
 
@@ -132,7 +125,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
                 modifier = Modifier.fillMaxWidth().height(56.dp),
             ) {
-                Icon(Icons.Rounded.Autorenew, contentDescription = null, modifier = Modifier.size(22.dp))
+                Icon(UjIcons.Autorenew, contentDescription = null, modifier = Modifier.size(22.dp))
                 Text("이번 주 다시 짜기", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(start = 8.dp))
             }
             Text(
@@ -229,7 +222,7 @@ private fun DayRow(day: DayAvailabilityEntity, expanded: Boolean, onToggle: () -
             TimeBox(day.endMin, Modifier.weight(1f))
             Box(Modifier.size(40.dp, 44.dp), contentAlignment = Alignment.Center) {
                 Icon(
-                    if (expanded) Icons.Rounded.ExpandMore else Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                    if (expanded) UjIcons.ExpandMore else UjIcons.KeyboardArrowRight,
                     contentDescription = null,
                     tint = PlannerColors.Faint,
                     modifier = Modifier.size(20.dp),

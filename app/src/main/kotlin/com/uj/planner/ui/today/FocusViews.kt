@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -30,6 +28,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.uj.planner.data.entity.PlacementStatus
+import com.uj.planner.ui.icons.UjIcons
 import com.uj.planner.ui.theme.PlannerColors
 import com.uj.planner.ui.theme.serif
 
@@ -84,7 +83,7 @@ fun RowScope.FocusPrimaryButton(focus: Focus, height: Dp, weight: Float = 1f, on
         },
         modifier = Modifier.weight(weight).height(height),
     ) {
-        Icon(Icons.Rounded.Check, contentDescription = null, modifier = Modifier.size(if (height > 56.dp) 26.dp else 22.dp))
+        Icon(UjIcons.Check, contentDescription = null, modifier = Modifier.size(if (height > 56.dp) 26.dp else 22.dp))
         Text(label, fontSize = if (height > 56.dp) 20.sp else 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 8.dp))
     }
 }

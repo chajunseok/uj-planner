@@ -16,15 +16,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.outlined.EventBusy
-import androidx.compose.material.icons.outlined.ViewWeek
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Autorenew
-import androidx.compose.material.icons.rounded.ExpandLess
-import androidx.compose.material.icons.rounded.OpenWith
-import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -48,6 +39,7 @@ import com.uj.planner.domain.model.Window
 import com.uj.planner.ui.DAY_NAMES
 import com.uj.planner.ui.formatDuration
 import com.uj.planner.ui.formatRange
+import com.uj.planner.ui.icons.UjIcons
 import com.uj.planner.ui.label
 import com.uj.planner.ui.theme.PlannerColors
 import com.uj.planner.ui.theme.TaskColor
@@ -59,7 +51,7 @@ private val BANNER_OPEN_SHAPE = RoundedCornerShape(topStart = 12.dp, topEnd = 12
 @Composable
 fun MoveBanner(block: WeekBlock, target: MoveTarget?) {
     BannerRow(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer) {
-        Icon(Icons.Rounded.OpenWith, contentDescription = null, modifier = Modifier.size(20.dp))
+        Icon(UjIcons.OpenWith, contentDescription = null, modifier = Modifier.size(20.dp))
         Text("${block.title} · 놓을 자리로 끌어 주세요", style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
         if (target != null) {
             Text(
@@ -80,7 +72,7 @@ fun UnplacedBanner(items: List<UnplacedItem>, expanded: Boolean, onToggle: () ->
         shape = if (expanded) BANNER_OPEN_SHAPE else BANNER_SHAPE,
         modifier = Modifier.clickable(onClickLabel = if (expanded) "상세 닫기" else "상세 보기", onClick = onToggle),
     ) {
-        Icon(Icons.Outlined.EventBusy, contentDescription = null, modifier = Modifier.size(20.dp))
+        Icon(UjIcons.EventBusy, contentDescription = null, modifier = Modifier.size(20.dp))
         Text(
             buildAnnotatedString {
                 append("빈 시간이 모자라 ")
@@ -92,7 +84,7 @@ fun UnplacedBanner(items: List<UnplacedItem>, expanded: Boolean, onToggle: () ->
         )
         Text(if (expanded) "닫기" else "보기", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
         Icon(
-            if (expanded) Icons.Rounded.ExpandLess else Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+            if (expanded) UjIcons.ExpandLess else UjIcons.KeyboardArrowRight,
             contentDescription = null,
             modifier = Modifier.padding(start = 2.dp).size(16.dp),
         )
@@ -139,11 +131,11 @@ fun UnplacedDetails(items: List<UnplacedItem>, onChangeConditions: (Long) -> Uni
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = { onChangeConditions(task.id) }, modifier = Modifier.weight(1f).height(40.dp)) {
-                            Icon(Icons.Rounded.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(UjIcons.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
                             Text("조건 바꾸기", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 4.dp))
                         }
                         Button(onClick = onReplan, modifier = Modifier.weight(1f).height(40.dp)) {
-                            Icon(Icons.Rounded.Autorenew, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(UjIcons.Autorenew, contentDescription = null, modifier = Modifier.size(18.dp))
                             Text("다시 짜기", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 4.dp))
                         }
                     }
@@ -178,7 +170,7 @@ fun EmptyCard(onAddFixed: () -> Unit, onAddFlex: () -> Unit, modifier: Modifier 
     ) {
         Column(Modifier.padding(horizontal = 22.dp, vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Box(Modifier.size(44.dp).background(PlannerColors.DoneContainer, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-                Icon(Icons.Outlined.ViewWeek, contentDescription = null, tint = PlannerColors.OnDoneContainer)
+                Icon(UjIcons.ViewWeek, contentDescription = null, tint = PlannerColors.OnDoneContainer)
             }
             Text("먼저 움직이지 않는 일정을 넣어 주세요", fontSize = 18.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold)
             Text(
@@ -192,7 +184,7 @@ fun EmptyCard(onAddFixed: () -> Unit, onAddFlex: () -> Unit, modifier: Modifier 
                 color = PlannerColors.Body,
             )
             Button(onClick = onAddFixed, shape = RoundedCornerShape(14.dp), modifier = Modifier.padding(top = 6.dp).fillMaxWidth().height(48.dp)) {
-                Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+                Icon(UjIcons.Add, contentDescription = null, modifier = Modifier.size(20.dp))
                 Text("고정 일정 추가", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(start = 6.dp))
             }
             TextButton(onClick = onAddFlex, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().height(40.dp)) {
