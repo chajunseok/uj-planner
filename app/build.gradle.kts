@@ -4,7 +4,6 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.ksp)
 }
 
 // 릴리스 서명. 키와 비밀번호는 레포에 두지 않는다 — keystore.properties 는 gitignore 되어 있고 tools/make-release-key.sh 가 만든다.
@@ -19,7 +18,7 @@ android {
 
     defaultConfig {
         applicationId = "com.uj.planner"
-        minSdk = 30
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
@@ -61,19 +60,16 @@ kotlin {
 }
 
 dependencies {
-    implementation(project(":domain"))
+    // :shared 가 CMP 로 UI 를 들고 있다. :app 은 진입점과 안드로이드 전용 화면만 남아
+    // androidx.compose 를 그대로 쓴다 — 안드로이드에서는 CMP 도 결국 같은 아티팩트로 해석된다.
+    implementation(project(":shared"))
 
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.material3)
-    implementation(libs.compose.material.icons)
-    implementation(libs.compose.ui.tooling.preview)
     debugImplementation(libs.compose.ui.tooling)
     implementation(libs.activity.compose)
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.navigation.compose)
     implementation(libs.window)
 
-    implementation(libs.room.runtime)
-    implementation(libs.room.ktx)
-    ksp(libs.room.compiler)
 }

@@ -4,8 +4,8 @@ U.J planner 를 **내 폰에 설치하고 업데이트하는 방법**이다. 앱
 
 ## 준비물
 
-- macOS + JDK 17 + Android SDK (`~/Library/Android/sdk`)
-- 폰: Android 11 이상. 갤럭시 Z 플립7(Android 16) 기준으로 만들었다
+- JDK 17 + Android SDK (macOS·리눅스·윈도우 모두 가능)
+- 폰: Android 8.0 이상
 - USB 케이블 (방법 A) 또는 파일을 폰으로 옮길 수단 (방법 B)
 
 ## 1. 릴리스 키 만들기 — 처음 한 번만
@@ -31,7 +31,9 @@ U.J planner 를 **내 폰에 설치하고 업데이트하는 방법**이다. 앱
 ./gradlew :app:assembleRelease
 ```
 
-결과물은 `app/build/outputs/apk/release/app-release.apk` (약 3MB). 첫 빌드는 코드 축소 때문에 10분 넘게 걸릴 수 있다.
+결과물은 `app/build/outputs/apk/release/app-release.apk` (약 6MB). 첫 빌드는 코드 축소 때문에 10분 넘게 걸릴 수 있다.
+
+크기의 대부분은 번들 SQLite 다. 안드로이드 8~10 의 시스템 SQLite 로는 내보내기가 동작하지 않아서 앱이 자기 SQLite 를 들고 다닌다.
 
 `app-release-unsigned.apk` 가 나왔다면 1번을 건너뛴 것이다. 서명 없는 APK 는 설치되지 않는다.
 
@@ -43,12 +45,13 @@ U.J planner 를 **내 폰에 설치하고 업데이트하는 방법**이다. 앱
 
 1. **설정 → 휴대전화 정보 → 소프트웨어 정보 → 빌드번호**를 7번 누른다 → 개발자 옵션이 켜진다
 2. **설정 → 개발자 옵션 → USB 디버깅**을 켠다
-3. 케이블로 맥에 연결하고, 폰에 뜨는 "USB 디버깅을 허용하시겠습니까?"에서 **허용**
+3. 케이블로 컴퓨터에 연결하고, 폰에 뜨는 "USB 디버깅을 허용하시겠습니까?"에서 **허용**
 
-맥에서:
+컴퓨터에서:
 
 ```bash
-ADB=~/Library/Android/sdk/platform-tools/adb
+# ADB 경로는 OS 마다 다르다. macOS ~/Library/Android/sdk · 리눅스 ~/Android/Sdk · 윈도우 %LOCALAPPDATA%\Android\Sdk
+ADB="$ANDROID_HOME/platform-tools/adb"
 $ADB devices                                                   # 폰이 device 로 보여야 한다
 $ADB install -r app/build/outputs/apk/release/app-release.apk
 ```

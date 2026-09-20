@@ -1,0 +1,199 @@
+package com.uj.planner.ui.settings
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.uj.planner.data.entity.DayAvailabilityEntity
+import com.uj.planner.domain.GRID_MIN
+import com.uj.planner.ui.DAY_NAMES
+import com.uj.planner.ui.components.ScreenHeader
+import com.uj.planner.ui.components.Stepper
+import com.uj.planner.ui.components.outlinedBox
+import com.uj.planner.ui.components.readableWidth
+import com.uj.planner.ui.formatTime
+import com.uj.planner.ui.icons.UjIcons
+import com.uj.planner.ui.theme.PlannerColors
+import kotlinx.datetime.LocalDate
+
+private const val MIDNIGHT = 24 * 60
+
+/**
+ * @param version 화면 맨 아래에 적는 앱 버전. 읽는 방법이 플랫폼마다 달라 받아 온다.
+ * @param dataSection 내보내기·가져오기 블록. 파일 선택기가 플랫폼 전용이라 통째로 받아 온다.
+ */
+@Composable
+fun SettingsScreen(
+    viewModel: SettingsViewModel,
+    version: String,
+    onBack: () -> Unit,
+    dataSection: @Composable ColumnScope.() -> Unit,
+) {
+    val days by viewModel.days.collectAsStateWithLifecycle()
+    val message by viewModel.message.collectAsStateWithLifecycle()
+    // 한 번에 한 요일만 펼친다. 0 은 모두 접힘.
+    var expandedDay by rememberSaveable { mutableIntStateOf(0) }
+
+    Scaffold(topBar = { ScreenHeader("설정", UjIcons.ArrowBack, "뒤로", onBack) }) { padding ->
+        Column(Modifier.padding(padding).fillMaxHeight().readableWidth().padding(horizontal = 20.dp)) {
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                Text("배치 가능 시간대", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 12.dp, bottom = 6.dp))
+                Text(
+                    "가변 일정은 이 시간 안에만 들어가요. 종료가 자정을 넘으면 다음날로 표시돼요.",
+                    fontSize = 13.sp,
+                    lineHeight = 20.sp,
+                    color = PlannerColors.Muted,
+                )
+                Row(Modifier.padding(top = 14.dp, bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PillButton(UjIcons.ContentCopy, "월 → 평일 전체", enabled = days.isNotEmpty()) { viewModel.copy(from = 1, to = 1..5) }
+                    PillButton(UjIcons.ContentCopy, "토 → 주말", enabled = days.isNotEmpty()) { viewModel.copy(from = 6, to = 6..7) }
+                }
+                days.forEach { day ->
+                    DayRow(
+                        day = day,
+                        expanded = expandedDay == day.dayOfWeek,
+                        onToggle = { expandedDay = if (expandedDay == day.dayOfWeek) 0 else day.dayOfWeek },
+                        onShift = { start, end -> viewModel.shift(day.dayOfWeek, start, end) },
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                }
+
+                dataSection()
+            }
+
+            Text(
+                message ?: "완료한 일정은 두고, 이번 주 남은 가변 일정을 처음부터 다시 배치해요.",
+                style = MaterialTheme.typography.bodySmall,
+                color = PlannerColors.Muted,
+                modifier = Modifier.padding(top = 16.dp, bottom = 10.dp),
+            )
+            OutlinedButton(
+                onClick = viewModel::replan,
+                shape = RoundedCornerShape(18.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+            ) {
+                Icon(UjIcons.Autorenew, contentDescription = null, modifier = Modifier.size(22.dp))
+                Text("이번 주 다시 짜기", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(start = 8.dp))
+            }
+            Text(
+                "U.J planner $version · 데이터는 이 기기에만 저장돼요",
+                fontSize = 11.sp,
+                color = PlannerColors.Faint,
+                modifier = Modifier.padding(top = 16.dp, bottom = 24.dp).align(Alignment.CenterHorizontally),
+            )
+        }
+    }
+}
+
+/** 내보내기·가져오기 버튼. 플랫폼이 만드는 [dataSection] 안에서 쓴다. */
+@Composable
+fun PillButton(icon: ImageVector, text: String, enabled: Boolean = true, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        border = BorderStroke(1.dp, PlannerColors.FaintOutline),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+        contentPadding = PaddingValues(horizontal = 14.dp),
+        modifier = Modifier.height(40.dp),
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+        Text(text, Modifier.padding(start = 6.dp), style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+@Composable
+private fun TimeBox(min: Int, modifier: Modifier) {
+    Row(modifier.height(44.dp).outlinedBox(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+        Text(formatTime(min), style = MaterialTheme.typography.titleSmall)
+        // 자정을 넘긴 종료 시각은 다음날이다.
+        if (min > MIDNIGHT) Text("+1", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = PlannerColors.NextDay, modifier = Modifier.padding(start = 4.dp))
+    }
+}
+
+@Composable
+private fun DayRow(day: DayAvailabilityEntity, expanded: Boolean, onToggle: () -> Unit, onShift: (startSteps: Int, endSteps: Int) -> Unit) {
+    val weekend = day.dayOfWeek >= 6
+    Column {
+        Row(
+            Modifier.fillMaxWidth().clickable(onClickLabel = if (expanded) "접기" else "펼치기", role = Role.Button, onClick = onToggle).height(60.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                DAY_NAMES[day.dayOfWeek - 1],
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = if (weekend) PlannerColors.Faint else MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.width(36.dp),
+            )
+            TimeBox(day.startMin, Modifier.weight(1f))
+            Text("–", fontSize = 14.sp, color = PlannerColors.Faint)
+            TimeBox(day.endMin, Modifier.weight(1f))
+            Box(Modifier.size(40.dp, 44.dp), contentAlignment = Alignment.Center) {
+                Icon(
+                    if (expanded) UjIcons.ExpandMore else UjIcons.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = PlannerColors.Faint,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+        AnimatedVisibility(expanded) {
+            Column(Modifier.padding(start = 46.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                StepRow("시작", day.startMin, canMinus = day.startMin > 0, canPlus = day.startMin + GRID_MIN < day.endMin) { onShift(it, 0) }
+                StepRow("종료", day.endMin, canMinus = day.endMin - GRID_MIN > day.startMin, canPlus = day.endMin < LATEST_END_MIN) { onShift(0, it) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StepRow(label: String, min: Int, canMinus: Boolean, canPlus: Boolean, onStep: (Int) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(44.dp))
+        Stepper(
+            value = formatTime(min),
+            onMinus = { onStep(-1) },
+            onPlus = { onStep(1) },
+            modifier = Modifier.weight(1f),
+            minusEnabled = canMinus,
+            plusEnabled = canPlus,
+            stepLabel = "$label 시각 30분",
+        )
+    }
+}
