@@ -6,7 +6,7 @@
 - **계획**: `.claude/plan/2609/260918.uj-planner.plan.md`
 - **디자인 의뢰문**: `.claude/design/2609/260918.uj-planner.design.md`
 - **디자인 구현 스펙**: `.claude/design/2609/260918.uj-planner.design-spec.md` — 색·타이포·치수·블록 상태의 출처. 색 값은 `ui/theme/` 에만 둔다
-- Application ID: `com.uj.planner` / minSdk 30 / targetSdk 36 / **compileSdk 37** / JDK 17
+- Application ID: `com.uj.planner` / minSdk 26 / targetSdk 36 / **compileSdk 37** / JDK 17
 - Gradle 9.7.1 / AGP 9.3.3 / Kotlin 2.4.20 / KSP 2.3.12 — 버전은 `gradle/libs.versions.toml` 한 곳에만 적는다
 
 `compileSdk` 가 `targetSdk` 보다 높은 것은 의도한 것이다. 최신 androidx 가 compileSdk 37 이상을 요구한다.
