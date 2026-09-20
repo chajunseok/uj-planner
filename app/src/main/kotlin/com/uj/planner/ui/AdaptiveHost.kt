@@ -58,7 +58,12 @@ fun AdaptiveHost(repository: PlannerRepository, backup: Backup) {
             it.state == FoldingFeature.State.HALF_OPENED && it.orientation == FoldingFeature.Orientation.HORIZONTAL
         }
         if (!isCover && hinge == null) {
-            PlannerNavHost(repository, backup, nav)
+            PlannerNavHost(
+                repository = repository,
+                nav = nav,
+                version = appVersion(),
+                dataSection = { settings -> AndroidDataSection(backup, settings) },
+            )
             return@BoxWithConstraints
         }
         val state = today.state.collectAsStateWithLifecycle().value ?: return@BoxWithConstraints

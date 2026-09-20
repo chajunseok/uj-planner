@@ -1,16 +1,12 @@
 package com.uj.planner.ui.settings
 
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -22,8 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -31,18 +25,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -50,7 +40,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.uj.planner.data.entity.DayAvailabilityEntity
 import com.uj.planner.domain.GRID_MIN
-import com.uj.planner.domain.nowLocalDateTime
 import com.uj.planner.ui.DAY_NAMES
 import com.uj.planner.ui.components.ScreenHeader
 import com.uj.planner.ui.components.Stepper
@@ -58,37 +47,26 @@ import com.uj.planner.ui.components.outlinedBox
 import com.uj.planner.ui.components.readableWidth
 import com.uj.planner.ui.formatTime
 import com.uj.planner.ui.icons.UjIcons
-import com.uj.planner.ui.pad2
 import com.uj.planner.ui.theme.PlannerColors
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.number
 
 private const val MIDNIGHT = 24 * 60
 
 /**
- * 내보내기 파일 이름에 붙이는 YYYYMMDD.
- *
- * kotlinx-datetime 에는 java.time 의 DateTimeFormatter 같은 것이 없어서 직접 조립한다.
- * 파일 이름 하나 때문에 포매터를 들이지 않는다.
+ * @param version 화면 맨 아래에 적는 앱 버전. 읽는 방법이 플랫폼마다 달라 받아 온다.
+ * @param dataSection 내보내기·가져오기 블록. 파일 선택기가 플랫폼 전용이라 통째로 받아 온다.
  */
-private fun exportStamp(): String {
-    val today = nowLocalDateTime().date
-    return "${today.year}${pad2(today.month.number)}${pad2(today.day)}"
-}
-
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
+fun SettingsScreen(
+    viewModel: SettingsViewModel,
+    version: String,
+    onBack: () -> Unit,
+    dataSection: @Composable ColumnScope.() -> Unit,
+) {
     val days by viewModel.days.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
     // 한 번에 한 요일만 펼친다. 0 은 모두 접힘.
     var expandedDay by rememberSaveable { mutableIntStateOf(0) }
-    val context = LocalContext.current
-    // 가져올 파일을 골랐고 아직 확인을 받지 않았다.
-    var pendingImport by rememberSaveable { mutableStateOf<Uri?>(null) }
-    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
-        if (uri != null) viewModel.export(uri)
-    }
-    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> pendingImport = uri }
 
     Scaffold(topBar = { ScreenHeader("설정", UjIcons.ArrowBack, "뒤로", onBack) }) { padding ->
         Column(Modifier.padding(padding).fillMaxHeight().readableWidth().padding(horizontal = 20.dp)) {
@@ -114,17 +92,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                 }
 
-                Text("데이터", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 28.dp, bottom = 6.dp))
-                Text(
-                    "일정과 기록은 이 기기에만 있어요. 폰을 바꾸거나 앱을 지우기 전에 파일로 내보내 두세요.",
-                    fontSize = 13.sp,
-                    lineHeight = 20.sp,
-                    color = PlannerColors.Muted,
-                )
-                Row(Modifier.padding(top = 14.dp, bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PillButton(UjIcons.FileUpload, "내보내기") { exportLauncher.launch("uj-planner-${exportStamp()}.db") }
-                    PillButton(UjIcons.FileDownload, "가져오기") { importLauncher.launch(arrayOf("*/*")) }
-                }
+                dataSection()
             }
 
             Text(
@@ -143,56 +111,18 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                 Text("이번 주 다시 짜기", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(start = 8.dp))
             }
             Text(
-                "U.J planner ${appVersion()} · 데이터는 이 기기에만 저장돼요",
+                "U.J planner $version · 데이터는 이 기기에만 저장돼요",
                 fontSize = 11.sp,
                 color = PlannerColors.Faint,
                 modifier = Modifier.padding(top = 16.dp, bottom = 24.dp).align(Alignment.CenterHorizontally),
             )
         }
     }
-
-    pendingImport?.let { uri ->
-        AlertDialog(
-            onDismissRequest = { pendingImport = null },
-            containerColor = MaterialTheme.colorScheme.surface,
-            title = { Text("지금 데이터를 파일의 내용으로 바꿀까요?", style = MaterialTheme.typography.titleLarge) },
-            text = {
-                Text("지금 있는 일정과 기록은 모두 사라지고 되돌릴 수 없어요. 바꾼 뒤에는 앱이 다시 시작돼요.", fontSize = 14.sp, lineHeight = 22.sp, color = PlannerColors.Body)
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        pendingImport = null
-                        viewModel.import(uri) { restartApp(context) }
-                    },
-                    modifier = Modifier.height(44.dp),
-                ) { Text("가져오기", style = MaterialTheme.typography.labelLarge) }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingImport = null }, modifier = Modifier.height(44.dp)) { Text("취소", style = MaterialTheme.typography.labelLarge) }
-            },
-        )
-    }
 }
 
-/** 가져오기 뒤에는 DB 가 닫혀 있다. 열어 둔 화면과 ViewModel 을 모두 버리고 새로 시작한다. */
-// ponytail: 시작 요청을 보낸 뒤 프로세스를 끝낸다. 드물게 다시 뜨지 않는 기기가 있으면 별도 프로세스에서 다시 띄우는 방식으로 바꾼다.
-private fun restartApp(context: Context) {
-    val intent = checkNotNull(context.packageManager.getLaunchIntentForPackage(context.packageName))
-        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-    context.startActivity(intent)
-    Runtime.getRuntime().exit(0)
-}
-
+/** 내보내기·가져오기 버튼. 플랫폼이 만드는 [dataSection] 안에서 쓴다. */
 @Composable
-private fun appVersion(): String {
-    val context = LocalContext.current
-    // 버전 줄 하나 때문에 설정 화면이 죽지 않게 한다. 못 읽으면 비워 둔다.
-    return remember { runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull().orEmpty() }
-}
-
-@Composable
-private fun PillButton(icon: ImageVector, text: String, enabled: Boolean = true, onClick: () -> Unit) {
+fun PillButton(icon: ImageVector, text: String, enabled: Boolean = true, onClick: () -> Unit) {
     OutlinedButton(
         onClick = onClick,
         enabled = enabled,

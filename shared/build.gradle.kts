@@ -48,6 +48,10 @@ kotlin {
             implementation(libs.room.runtime)
             implementation(libs.sqlite.bundled)
             implementation(libs.kotlinx.coroutines.core)
+
+            implementation(libs.lifecycle.viewmodel.compose.mp)
+            implementation(libs.lifecycle.runtime.compose.mp)
+            implementation(libs.navigation.compose.mp)
         }
     }
 }

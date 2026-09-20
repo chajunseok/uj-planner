@@ -14,9 +14,6 @@ import java.io.InputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** 백업 파일을 받아들일 수 없는 이유. [message] 를 그대로 사용자에게 보여 준다. */
-class BackupException(message: String) : Exception(message)
-
 /**
  * DB 파일을 통째로 내보내고 가져온다. 서버도 자동 백업도 없는 앱이라, 폰을 바꾸거나 앱을 지울 때 데이터를 옮길 유일한 길이다.
  * 별도 형식을 만들지 않고 SQLite 파일 그대로 다룬다.

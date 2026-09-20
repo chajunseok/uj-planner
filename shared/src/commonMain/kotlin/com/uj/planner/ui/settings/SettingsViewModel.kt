@@ -1,9 +1,7 @@
 package com.uj.planner.ui.settings
 
-import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.uj.planner.data.Backup
 import com.uj.planner.data.BackupException
 import com.uj.planner.data.PlannerRepository
 import com.uj.planner.data.entity.DayAvailabilityEntity
@@ -24,7 +22,7 @@ import kotlinx.coroutines.withContext
 /** 종료는 다음 날 06:00 까지 허용한다. 그보다 늦으면 다음 날 아침 일정과 구분이 안 된다. */
 const val LATEST_END_MIN = 30 * 60
 
-class SettingsViewModel(private val repository: PlannerRepository, private val backup: Backup) : ViewModel() {
+class SettingsViewModel(private val repository: PlannerRepository) : ViewModel() {
     // 아직 저장되지 않은 변경(요일 → 값). 화면은 저장된 값 위에 이것을 덮어 보여 준다.
     // 버튼을 빠르게 연달아 눌러도 매번 최신 값에서 계산되므로 누른 횟수만큼 정확히 움직인다.
     private val edits = MutableStateFlow<Map<Int, DayAvailabilityEntity>>(emptyMap())
@@ -70,10 +68,16 @@ class SettingsViewModel(private val repository: PlannerRepository, private val b
         }
     }
 
-    fun export(target: Uri) {
+    /**
+     * 파일로 내보낸다.
+     *
+     * 어디에 어떻게 쓰는지는 플랫폼마다 달라 [write] 로 받는다 — 안드로이드는 SAF 의 Uri,
+     * iOS 는 문서 선택기의 URL 이다. 결과를 알리는 방식은 양쪽이 같아서 여기 남는다.
+     */
+    fun exportWith(write: suspend () -> Unit) {
         viewModelScope.launch {
             try {
-                backup.exportTo(target)
+                write()
                 _message.value = "파일로 내보냈어요"
             } catch (e: CancellationException) {
                 throw e
@@ -84,10 +88,13 @@ class SettingsViewModel(private val repository: PlannerRepository, private val b
     }
 
     /**
-     * 지금 데이터를 파일의 내용으로 바꾼다. 받아들일 수 없는 파일이면 이유만 알리고 아무것도 바꾸지 않는다.
-     * 그 밖에는 성공이든 실패든 DB 가 닫혔을 수 있어서 [restart] 로 앱을 다시 시작한다.
+     * 지금 데이터를 파일의 내용으로 바꾼다.
+     *
+     * [read] 가 던지는 예외 중 [BackupException] 만 "아무것도 바뀌지 않은 실패" 로 보고 이유를
+     * 알린다. 나머지는 전부 DB 가 이미 닫혔을 수 있다고 보고 [restart] 로 넘긴다 — 플랫폼이
+     * 무엇을 던지든 이 규칙은 같다.
      */
-    fun import(source: Uri, restart: () -> Unit) {
+    fun importWith(read: suspend () -> Unit, restart: () -> Unit) {
         // 가져오기는 DB 를 닫는다. 가용 시간 저장이 도는 중이면 그 저장이 깨진다.
         if (saving) {
             _message.value = "시간대를 저장하는 중이에요. 잠시 뒤에 다시 눌러 주세요"
@@ -97,7 +104,7 @@ class SettingsViewModel(private val repository: PlannerRepository, private val b
             // 시작했으면 화면을 떠나도 끝까지 간다. 중간에 취소되면 DB 는 닫혔는데 다시 시작은 안 된 채로 남는다.
             withContext(NonCancellable) {
                 try {
-                    backup.importFrom(source)
+                    read()
                     restart()
                 } catch (e: BackupException) {
                     _message.value = e.message
