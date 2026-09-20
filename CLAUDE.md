@@ -1,6 +1,7 @@
 # U.J planner
 
-갤럭시 Z 플립7용 주간 자동 배치 플래너. 고정 일정만 사람이 넣고, 가변 일정은 앱이 남는 시간에 배치한다.
+주간 자동 배치 플래너. 고정 일정만 사람이 넣고, 가변 일정은 앱이 남는 시간에 배치한다.
+안드로이드(8.0 이상, 폰·태블릿·폴더블)와 iOS 에서 같은 앱이 돈다.
 
 - **PRD**: `.claude/prd/2609/260918.uj-planner.prd.md`
 - **계획**: `.claude/plan/2609/260918.uj-planner.plan.md`
@@ -10,7 +11,7 @@
 - Gradle 9.7.1 / AGP 9.3.3 / Kotlin 2.4.20 / KSP 2.3.12 — 버전은 `gradle/libs.versions.toml` 한 곳에만 적는다
 
 `compileSdk` 가 `targetSdk` 보다 높은 것은 의도한 것이다. 최신 androidx 가 compileSdk 37 이상을 요구한다.
-앱의 동작 기준은 `targetSdk` 36(플립7의 Android 16)이고, `compileSdk` 는 컴파일에 쓰는 API 목록일 뿐이다.
+앱의 동작 기준은 `targetSdk` 36 이고, `compileSdk` 는 컴파일에 쓰는 API 목록일 뿐이다.
 
 AGP 9 는 Kotlin 이 내장이다. **`org.jetbrains.kotlin.android` 플러그인을 적용하지 않는다** — 적용하면 빌드가 깨진다.
 
@@ -163,6 +164,19 @@ find . -name "*.kt" -not -path "*/build/*" | xargs wc -l | awk '$1 > 500 && $2 !
 
 커밋 전에 최소한 `:domain:jvmTest` 와 `:app:assembleDebug` 가 통과하고, 500줄 검사 출력이 비어 있어야 한다.
 
+### iOS
+
+```bash
+./gradlew :shared:compileKotlinIosArm64 -Puj.ios=true   # macOS 에서만
+```
+
+**맥이 아니면 iOS 는 컴파일되지 않는다.** Kotlin/Native 의 애플 플랫폼 컴파일은 macOS 전용이고,
+그래서 `domain` 과 `shared` 는 맥 호스트에서만 iOS 타깃을 선언한다(`buildIos`).
+
+그 결과 **`shared/src/iosMain/` 과 `iosApp/` 의 코드는 아직 한 번도 컴파일된 적이 없다.**
+맥에서 처음 빌드할 때 손볼 것이 나올 수 있다. 윈도우·리눅스에서 그 코드를 고칠 때는
+"컴파일로 확인할 수 없다" 는 것을 알고 고친다. 연결 절차는 `iosApp/README.md` 에 있다.
+
 ## 릴리스 빌드와 서명
 
 ```bash
@@ -176,7 +190,13 @@ find . -name "*.kt" -not -path "*/build/*" | xargs wc -l | awk '$1 > 500 && $2 !
 | 키를 잃으면 | 같은 앱으로 업데이트할 수 없다. 새 키의 APK 는 덮어 설치가 안 돼 앱을 지워야 하고, 데이터는 설정의 내보내기·가져오기로만 옮길 수 있다 |
 | 업데이트 배포 | `versionCode` 를 올린다. 같거나 낮으면 덮어 설치가 거부된다 |
 | 디버그 ↔ 릴리스 | 서명이 달라 서로 덮어 설치되지 않는다. 실사용 기기에는 처음부터 릴리스 APK 를 깐다 |
-| 코드 축소 | 릴리스만 R8 축소를 켠다(1.5MB). 릴리스에서만 나는 문제는 축소 규칙부터 의심한다 |
+| 코드 축소 | 릴리스만 R8 축소를 켠다(6.2MB). 릴리스에서만 나는 문제는 축소 규칙부터 의심한다 |
+| APK 크기 | 그중 **4.7MB 가 번들 SQLite**(`libsqliteJni.so` × 4 ABI)다. 줄이고 싶으면 안드로이드만 `AndroidSQLiteDriver` 로 바꾸면 되지만 **그러면 안 된다** — 아래 참고 |
+
+**번들 SQLite 를 쓰는 이유.** 안드로이드의 시스템 SQLite 버전은 OS 버전을 따라간다. 내보내기가
+쓰는 `VACUUM INTO` 는 SQLite 3.27 부터인데 그건 안드로이드 11 이후다. minSdk 가 26 이라
+안드로이드 8~10 에서는 시스템 드라이버로는 내보내기가 깨진다. 번들 드라이버는 모든 안드로이드
+버전과 iOS 에서 같은 SQLite 를 쓰게 해 이 차이를 없앤다. 4.7MB 는 그 대가다.
 
 `keystore.properties` 가 없으면 릴리스 빌드는 서명 없이 나온다. 디버그 빌드와 검증 명령은 영향받지 않는다.
 
