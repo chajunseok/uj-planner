@@ -74,7 +74,7 @@
 | 저장 | Room (SQLite), 로컬 전용 |
 | 폴더블 | `androidx.window` 의 `WindowInfoTracker` / `FoldingFeature` |
 | 구조 | 2모듈 — `domain`(순수 Kotlin, 배치 규칙과 테스트) ← `app`(Room + Compose) |
-| 대상 | minSdk 30 · targetSdk 36 (플립7의 Android 16) |
+| 대상 | minSdk 26 · targetSdk 36 (안드로이드 8.0 이상) |
 
 ```
 Room DAO (Flow) → Repository → ViewModel (StateFlow) → Composable
