@@ -61,6 +61,7 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":shared"))
     implementation(project(":domain"))
 
     implementation(platform(libs.compose.bom))
