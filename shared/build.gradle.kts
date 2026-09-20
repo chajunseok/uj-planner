@@ -15,6 +15,11 @@ val buildIos = providers.gradleProperty("uj.ios").orNull?.toBooleanStrictOrNull(
 kotlin {
     jvmToolchain(17)
 
+    // Room KMP 가 @ConstructedBy 에 expect object 를 요구한다. 코드로 피할 수 없는 Beta 경고라 끈다.
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
     android {
         namespace = "com.uj.planner.shared"
         compileSdk = 37
